@@ -8,6 +8,20 @@ export type CommanderSlot = 0 | 1;
 
 export type Rotation = 0 | 90 | 180 | 270;
 
+/** A counter shown permanently on the player panel with its own −/+ buttons. */
+export type BuiltinCounter = 'energy' | 'experience' | 'poison' | 'tax';
+/** Built-in counter name, or the id of one of the player's custom counters. */
+export type PinKey = BuiltinCounter | string;
+
+export const MAX_PINNED = 2;
+
+/** Player-named counter, e.g. "Skarby", "+1/+1", "Storm". Value clamps at >= 0. */
+export interface CustomCounter {
+  id: string;
+  name: string;
+  value: number;
+}
+
 export interface Player {
   id: PlayerId;
   name: string;
@@ -27,6 +41,9 @@ export interface Player {
   commanderDamage: Record<PlayerId, [number, number]>;
   /** Manually conceded / removed. Rule-based loss is derived in rules.ts. */
   conceded: boolean;
+  customCounters: CustomCounter[];
+  /** Counters shown on the panel, in display order, at most MAX_PINNED. */
+  pinned: PinKey[];
   /** Seat orientation of the panel on the table. */
   rotation: Rotation;
 }
@@ -52,6 +69,10 @@ export interface PlayerSetup {
   name: string;
   color: string;
   hasPartner?: boolean;
+  /** Built-in counters to pin; custom counters listed below are pinned too (up to MAX_PINNED total). */
+  pinned?: BuiltinCounter[];
+  /** Names of custom counters to create. */
+  customCounters?: string[];
 }
 
 export type Action =
@@ -75,6 +96,11 @@ export type Action =
   | { type: 'renamePlayer'; playerId: PlayerId; name: string }
   | { type: 'setColor'; playerId: PlayerId; color: string }
   | { type: 'setPartner'; playerId: PlayerId; hasPartner: boolean }
+  | { type: 'setPinned'; playerId: PlayerId; pinned: PinKey[] }
+  | { type: 'addCustomCounter'; playerId: PlayerId; name: string }
+  | { type: 'renameCustomCounter'; playerId: PlayerId; counterId: string; name: string }
+  | { type: 'removeCustomCounter'; playerId: PlayerId; counterId: string }
+  | { type: 'adjustCustomCounter'; playerId: PlayerId; counterId: string; delta: number }
   | { type: 'clockStart'; now: number }
   | { type: 'clockPause'; now: number }
   | { type: 'clockNextTurn'; now: number }
