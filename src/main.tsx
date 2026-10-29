@@ -4,6 +4,7 @@ import { initPwa } from './pwa';
 import { loadLastSeen, markSeen, pauseIfStale, saveSoon, storage } from './storage';
 import { App } from './ui/App';
 import { ErrorBoundary } from './ui/ErrorBoundary';
+import { startHostSound } from './ui/soundWiring';
 import { onHistoryChange, setHistory } from './ui/store';
 import './ui/styles.css';
 
@@ -18,6 +19,7 @@ function mountHost() {
   markSeen();
   onHistoryChange((h) => (h ? saveSoon(h) : storage.clear()));
   initPwa();
+  startHostSound();
   void host.discoverRelay();
 
   render(

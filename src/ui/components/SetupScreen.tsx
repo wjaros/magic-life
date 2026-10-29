@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { setSoundEnabled, soundEnabled } from '../sound';
 import { MAX_PINNED } from '../../core/types';
 import type { BuiltinCounter, Seating } from '../../core/types';
 import { game, screen, startGame } from '../store';
@@ -112,6 +113,14 @@ export function SetupScreen() {
         {LIMITS.map(([label, v]) => (
           <button key={label} class={`chip${limit === v ? ' on' : ''}`} onClick={() => setLimit(v)}>{label}</button>
         ))}
+      </div>
+      <div class="chips">
+        <button
+          class={`chip${soundEnabled.value ? ' on' : ''}`}
+          role="switch"
+          aria-checked={soundEnabled.value}
+          onClick={() => setSoundEnabled(!soundEnabled.value)}
+        >🔔 Sygnały dźwiękowe</button>
       </div>
 
       {count > 2 && (

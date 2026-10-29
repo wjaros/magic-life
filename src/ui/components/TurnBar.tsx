@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { host } from '../../net/host';
 import { formatMs } from '../engine';
 import { pickedFor, rollFirstPlayer, rolling } from '../firstPlayer';
+import { setSoundEnabled, soundEnabled } from '../sound';
 import { ConnectSheet } from './ConnectSheet';
 import { act, canRedo, canUndo, game, redoAct, resetGame, screen, snap, undoAct, vibrate } from '../store';
 
@@ -62,6 +63,9 @@ export function TurnBar() {
                 📱 Połącz telefony
               </button>
             )}
+            <button class="btn" role="switch" aria-checked={soundEnabled.value} onClick={() => setSoundEnabled(!soundEnabled.value)}>
+              🔔 Dźwięk: {soundEnabled.value ? 'wł.' : 'wył.'}
+            </button>
             <button class="btn" onClick={() => { redoAct(); }} disabled={!canRedo.value}>↷ Ponów</button>
             {g.players.length > 2 && (
               <button
