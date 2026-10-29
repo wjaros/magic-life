@@ -3,13 +3,9 @@ services:
     build: .
     image: magic-life:latest
     restart: unless-stopped
-    # Nginx Proxy Manager reaches the container over this network; no host port is published.
-    networks: [proxy]
+    # Nginx Proxy Manager on ANOTHER host forwards to http://<this-host-ip>:${HOST_PORT}.
+    # Set HOST_BIND to this host's LAN/VPN IP so the plain-HTTP port is not public.
+    ports:
+      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-8080}:8080"
     environment:
       MAX_ROOMS: "500"
-
-networks:
-  proxy:
-    external: true
-    # Set this to the network your Nginx Proxy Manager container is attached to.
-    name: ${PROXY_NETWORK:-npm_default}

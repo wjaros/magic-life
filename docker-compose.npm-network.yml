@@ -1,0 +1,12 @@
+# Optional override when Nginx Proxy Manager runs on the SAME host:
+#   docker compose -f docker-compose.yml -f docker-compose.npm-network.yml up -d --build
+# NPM then reaches the container by name (magic-life:8080) and no host port is needed.
+services:
+  magic-life:
+    ports: !reset []
+    networks: [proxy]
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-npm_default}
