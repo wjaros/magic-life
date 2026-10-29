@@ -66,7 +66,7 @@ Orkiestrator (główna sesja) robi Fazę 0, rozdziela zadania, scala gałęzie i
 - Scaffold Vite + TS + Preact, ESLint/Prettier, Vitest, Playwright.
 - `core/types.ts` i interfejs `Clock`: zamrożone, zmiany tylko przez orkiestratora.
 - Pusty `App` z routingiem Setup → Game.
-- **Wyjście:** `npm run dev / build / test` działa na `main`.
+- **Wyjście:** `npm run dev / build / test` działa na `master`.
 
 ### Faza 1: Równolegle (4 agenty)
 
