@@ -6,7 +6,7 @@ export function TurnBar() {
   const g = game.value!;
   const s = snap.value!;
   const [menu, setMenu] = useState(false);
-  const [confirm, setConfirm] = useState<null | 'reset' | 'new'>(null);
+  const [confirm, setConfirm] = useState<null | 'reset'>(null);
 
   // one buzz when the turn limit is crossed
   const wasOver = useRef(false);
@@ -22,7 +22,7 @@ export function TurnBar() {
 
   return (
     <>
-      <div class={`turnbar${s.overTurnLimit ? ' warn' : ''}${s.running ? '' : ' paused'}`}>
+      <div class={`turnbar${g.players.length <= 3 ? ' wide' : ''}${s.overTurnLimit ? ' warn' : ''}${s.running ? '' : ' paused'}`}>
         <div class="tb-info">
           <span class="tb-time">{formatMs(s.gameMs)}</span>
           <span class="tb-turn">Tura {s.turn}</span>
@@ -52,14 +52,8 @@ export function TurnBar() {
             >
               {confirm === 'reset' ? 'Na pewno? Zresetuj' : 'Resetuj grę'}
             </button>
-            <button
-              class="btn danger"
-              onClick={() => {
-                if (confirm !== 'new') return setConfirm('new');
-                closeMenu(); screen.value = 'setup';
-              }}
-            >
-              {confirm === 'new' ? 'Na pewno? Nowa gra' : 'Nowa gra (ustawienia)'}
+            <button class="btn" onClick={() => { closeMenu(); screen.value = 'setup'; }}>
+              Nowa gra
             </button>
             <button class="btn primary" onClick={closeMenu}>Zamknij</button>
           </div>

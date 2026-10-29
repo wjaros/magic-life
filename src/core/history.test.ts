@@ -35,8 +35,8 @@ describe('history', () => {
 
   it('undo and redo round-trip', () => {
     let h = mk();
-    h = dispatch(h, { type: 'adjustLife', playerId: 'p1', delta: -1 });
-    h = dispatch(h, { type: 'adjustLife', playerId: 'p1', delta: -1 });
+    h = dispatch(h, { type: 'adjustLife', playerId: 'p1', delta: -1 }, 0);
+    h = dispatch(h, { type: 'adjustLife', playerId: 'p1', delta: -1 }, 5000);
     h = undo(h);
     expect(life(h)).toBe(39);
     h = undo(h);
@@ -61,7 +61,7 @@ describe('history', () => {
   it('caps past at 200, dropping the oldest', () => {
     let h = mk();
     for (let i = 0; i < HISTORY_CAP + 50; i++) {
-      h = dispatch(h, { type: 'adjustLife', playerId: 'p1', delta: -1 });
+      h = dispatch(h, { type: 'adjustLife', playerId: 'p1', delta: -1 }, i * 10_000);
     }
     expect(HISTORY_CAP).toBe(200);
     expect(h.past).toHaveLength(200);
@@ -108,6 +108,52 @@ describe('history', () => {
     expect(h.past).toEqual([]);
     expect(h.future).toEqual([]);
     expect(h.present.players).toHaveLength(1);
+  });
+
+  describe('merging', () => {
+    const adj = (delta: number, playerId = 'p1') => ({ type: 'adjustLife', playerId, delta }) as const;
+
+    it('collapses rapid same-target life changes into one undo step', () => {
+      let h = dispatch(mk(), adj(-1), 1000);
+      h = dispatch(h, adj(-1), 1500);
+      h = dispatch(h, adj(-10), 2900); // within 1500 ms of the previous action
+      expect(h.past).toHaveLength(1);
+      expect(life(h)).toBe(28);
+      expect(life(undo(h))).toBe(40);
+    });
+
+    it('does not merge after the window, for another target, or another action type', () => {
+      let h = dispatch(mk(), adj(-1), 1000);
+      h = dispatch(h, adj(-1), 2501);
+      expect(h.past).toHaveLength(2);
+      h = dispatch(h, adj(-1, 'p2'), 2600);
+      expect(h.past).toHaveLength(3);
+      h = dispatch(h, { type: 'adjustPoison', playerId: 'p2', delta: 1 }, 2700);
+      expect(h.past).toHaveLength(4);
+    });
+
+    it('merges poison and per-slot commander damage', () => {
+      let h = dispatch(mk(), { type: 'adjustPoison', playerId: 'p1', delta: 1 }, 0);
+      h = dispatch(h, { type: 'adjustPoison', playerId: 'p1', delta: 1 }, 100);
+      expect(h.past).toHaveLength(1);
+      const cd = (slot: 0 | 1) =>
+        ({ type: 'adjustCommanderDamage', targetId: 'p1', sourceId: 'p2', slot, delta: 1 }) as const;
+      h = dispatch(h, cd(0), 200);
+      h = dispatch(h, cd(0), 300);
+      expect(h.past).toHaveLength(2);
+      h = dispatch(h, cd(1), 400);
+      expect(h.past).toHaveLength(3);
+    });
+
+    it('clock actions in between do not break the merge; undo does', () => {
+      let h = dispatch(mk(), adj(-1), 0);
+      h = dispatch(h, { type: 'clockStart', now: 10 }, 10);
+      h = dispatch(h, adj(-1), 100);
+      expect(h.past).toHaveLength(1);
+      h = undo(dispatch(h, adj(-1), 200));
+      h = dispatch(h, adj(-1), 300);
+      expect(h.past).toHaveLength(1);
+    });
   });
 
   it('does not mutate the previous history object', () => {

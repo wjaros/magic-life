@@ -1,17 +1,31 @@
 import { useState } from 'preact/hooks';
-import { startGame } from '../store';
+import { game, screen, startGame } from '../store';
 import { PALETTE } from './layout';
 
 const LIVES = [20, 30, 40];
 const LIMITS: Array<[string, number | null]> = [['Wył.', null], ['1 min', 1], ['2 min', 2], ['3 min', 3], ['5 min', 5]];
 
+/** Existing game (when opened via "Nowa gra") prefills names, colors, partners and settings. */
+function prefill<T>(fromGame: (i: number) => T | undefined, fallback: (i: number) => T): T[] {
+  return Array.from({ length: 6 }, (_, i) => fromGame(i) ?? fallback(i));
+}
+
 export function SetupScreen() {
-  const [count, setCount] = useState(4);
-  const [life, setLife] = useState(40);
-  const [limit, setLimit] = useState<number | null>(null);
-  const [names, setNames] = useState<string[]>(() => Array.from({ length: 6 }, (_, i) => `Gracz ${i + 1}`));
-  const [colors, setColors] = useState<string[]>(() => PALETTE.slice());
-  const [partners, setPartners] = useState<boolean[]>(() => Array(6).fill(false));
+  const cur = game.peek();
+  const [count, setCount] = useState(() => cur ? Math.min(6, Math.max(2, cur.players.length)) : 4);
+  const [life, setLife] = useState(() => cur?.settings.startingLife ?? 40);
+  const [limit, setLimit] = useState<number | null>(() =>
+    cur?.settings.turnLimitMs != null ? cur.settings.turnLimitMs / 60_000 : null,
+  );
+  const [names, setNames] = useState<string[]>(() =>
+    prefill((i) => cur?.players[i]?.name, (i) => `Gracz ${i + 1}`),
+  );
+  const [colors, setColors] = useState<string[]>(() =>
+    prefill((i) => cur?.players[i]?.color, (i) => PALETTE[i]),
+  );
+  const [partners, setPartners] = useState<boolean[]>(() =>
+    prefill((i) => cur?.players[i]?.hasPartner, () => false),
+  );
 
   const set = <T,>(arr: T[], i: number, v: T) => arr.map((x, j) => (j === i ? v : x));
   const pickColor = (i: number, c: string) => {
@@ -91,6 +105,9 @@ export function SetupScreen() {
       </div>
 
       <button class="btn primary start" onClick={start}>Start</button>
+      {cur && (
+        <button class="btn back" onClick={() => { screen.value = 'game'; }}>Wróć do gry</button>
+      )}
     </div>
   );
 }

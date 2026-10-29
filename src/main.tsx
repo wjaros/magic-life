@@ -1,12 +1,25 @@
 import { render } from 'preact';
 import { initPwa } from './pwa';
-import { saveSoon, storage } from './storage';
+import { loadLastSeen, markSeen, pauseIfStale, saveSoon, storage } from './storage';
 import { App } from './ui/App';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import { onHistoryChange, setHistory } from './ui/store';
 import './ui/styles.css';
 
-setHistory(storage.load());
+try {
+  const loaded = storage.load();
+  setHistory(loaded ? pauseIfStale(loaded, loadLastSeen(), Date.now()) : null);
+} catch {
+  storage.clear();
+  setHistory(null);
+}
+markSeen();
 onHistoryChange((h) => (h ? saveSoon(h) : storage.clear()));
 initPwa();
 
-render(<App />, document.getElementById('app')!);
+render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+  document.getElementById('app')!,
+);

@@ -1,18 +1,26 @@
 import type { Action, CommanderSlot, Player } from '../../core/types';
 import { act, game, vibrate } from '../store';
+import { useHold } from '../useHold';
 import { Rotated } from './Rotated';
 
-function Stepper(props: { label: string; value: number; onChange: (d: number) => void; color?: string }) {
+/** hold: tap ±1, holding repeats ±1 every 150 ms (fine-grained, for poison / commander damage). */
+function Stepper(props: {
+  label: string; value: number; onChange: (d: number) => void; color?: string; hold?: boolean;
+}) {
   const go = (d: number) => { props.onChange(d); vibrate(10); };
+  const minus = useHold(go, -1, { holdStep: 1, repeatMs: 150 });
+  const plus = useHold(go, 1, { holdStep: 1, repeatMs: 150 });
+  const bind = (h: ReturnType<typeof useHold>, d: number) =>
+    props.hold ? h : { onClick: () => go(d) };
   return (
     <div class="srow">
       <span class="slabel">
         {props.color && <i class="dot" style={{ background: props.color }} />}
         {props.label}
       </span>
-      <button class="sbtn" onClick={() => go(-1)} aria-label={`${props.label} minus`}>−</button>
+      <button class="sbtn" {...bind(minus, -1)} aria-label={`${props.label} minus`}>−</button>
       <span class="sval">{props.value}</span>
-      <button class="sbtn" onClick={() => go(1)} aria-label={`${props.label} plus`}>+</button>
+      <button class="sbtn" {...bind(plus, 1)} aria-label={`${props.label} plus`}>+</button>
     </div>
   );
 }
@@ -37,7 +45,7 @@ export function CounterSheet(props: { playerId: string; onClose: () => void }) {
             </header>
 
             <section>
-              <Stepper label="Trucizna" value={p.poison} onChange={(d) => send({ type: 'adjustPoison', playerId: p.id, delta: d })} />
+              <Stepper hold label="Trucizna" value={p.poison} onChange={(d) => send({ type: 'adjustPoison', playerId: p.id, delta: d })} />
               <Stepper label="Energia" value={p.energy} onChange={(d) => send({ type: 'adjustEnergy', playerId: p.id, delta: d })} />
               <Stepper label="Doświadczenie" value={p.experience} onChange={(d) => send({ type: 'adjustExperience', playerId: p.id, delta: d })} />
               {slots.map((slot) => (
@@ -56,6 +64,7 @@ export function CounterSheet(props: { playerId: string; onClose: () => void }) {
                 {opponents.map((o) =>
                   ((o.hasPartner ? [0, 1] : [0]) as CommanderSlot[]).map((slot) => (
                     <Stepper
+                      hold
                       key={`${o.id}-${slot}`}
                       color={o.color}
                       label={o.hasPartner ? `${o.name} (${slot + 1})` : o.name}

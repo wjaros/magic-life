@@ -14,16 +14,33 @@ export function enableWakeLock(): () => void {
 
   let sentinel: WakeLockSentinel | null = null;
   let disposed = false;
+  let inflight: Promise<void> | null = null;
 
-  const acquire = async (): Promise<void> => {
-    if (disposed || document.visibilityState !== 'visible') return;
-    if (sentinel !== null && !sentinel.released) return;
-    try {
-      sentinel = await navigator.wakeLock.request('screen');
-    } catch {
-      // Denied (battery saver, policy, not visible yet) or unsupported: not an error for the game.
-      sentinel = null;
-    }
+  const acquire = (): Promise<void> => {
+    if (inflight) return inflight; // concurrent callers share one request
+    if (disposed || document.visibilityState !== 'visible') return Promise.resolve();
+    if (sentinel !== null && !sentinel.released) return Promise.resolve();
+    inflight = (async () => {
+      try {
+        const s = await navigator.wakeLock.request('screen');
+        if (disposed) {
+          s.release().catch(() => {});
+          return;
+        }
+        sentinel = s;
+        // The system may release the lock (battery saver, ...): take it again if we can.
+        s.addEventListener('release', () => {
+          if (sentinel === s) sentinel = null;
+          if (!disposed && document.visibilityState === 'visible') void acquire();
+        });
+      } catch {
+        // Denied (battery saver, policy, not visible yet) or unsupported: not an error for the game.
+        sentinel = null;
+      } finally {
+        inflight = null;
+      }
+    })();
+    return inflight;
   };
 
   const onVisibilityChange = (): void => {
