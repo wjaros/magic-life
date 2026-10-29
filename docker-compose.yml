@@ -1,0 +1,15 @@
+services:
+  magic-life:
+    build: .
+    image: magic-life:latest
+    restart: unless-stopped
+    # Nginx Proxy Manager reaches the container over this network; no host port is published.
+    networks: [proxy]
+    environment:
+      MAX_ROOMS: "500"
+
+networks:
+  proxy:
+    external: true
+    # Set this to the network your Nginx Proxy Manager container is attached to.
+    name: ${PROXY_NETWORK:-npm_default}
