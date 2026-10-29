@@ -15,16 +15,23 @@ cd magic-life
 ```bash
 # IP tego serwera w sieci, którą widzi NPM (LAN / VPN, np. Tailscale/WireGuard)
 export HOST_BIND=192.168.1.20
-export HOST_PORT=8080
+export HOST_PORT=18040             # dowolny wolny port: ss -tlnp | grep 18040
 docker compose up -d --build
 ```
 
-Port 8080 serwuje zwykłe HTTP, więc nie wystawiaj go do internetu: zbinduj go do IP z sieci
-lokalnej/VPN (`HOST_BIND`) albo ogranicz firewallem tylko do adresu hosta z NPM, np.:
+Ten port serwuje zwykłe HTTP, więc nie może być widoczny z internetu. Zabezpiecza go
+`HOST_BIND`: kontener nasłuchuje tylko na podanym adresie z sieci lokalnej/VPN
+(domyślnie `127.0.0.1`, czyli nigdzie poza tym serwerem).
+
+Uwaga: **ufw/firewalld nie chronią portów wystawionych przez Dockera** — Docker dopisuje
+własne reguły iptables przed regułami ufw. Jeśli musisz bindować na publiczny adres,
+filtruj w łańcuchu `DOCKER-USER`, np.:
 
 ```bash
-sudo ufw allow from <IP-hosta-NPM> to any port 8080 proto tcp
+sudo iptables -I DOCKER-USER -p tcp --dport 8080 ! -s <IP-hosta-NPM> -j DROP
 ```
+
+(`--dport` to port w kontenerze, 8080, bo reguła działa już po przekierowaniu).
 
 **Wariant B: NPM na tym samym hoście** (bez wystawiania portu, przez wspólną sieć Dockera; wymaga Docker Compose 2.24+):
 
@@ -44,15 +51,15 @@ Hosts → Proxy Hosts → Add Proxy Host:
 | Domain Names | `mtg.twojadomena.pl` | `mtg.twojadomena.pl` |
 | Scheme | `http` | `http` |
 | Forward Hostname / IP | IP serwera z aplikacją, np. `192.168.1.20` | `magic-life` |
-| Forward Port | `8080` (`HOST_PORT`) | `8080` |
+| Forward Port | `18040` (`HOST_PORT`) | `8080` (port w kontenerze) |
 | Websockets Support | **włączone** | **włączone** |
 | Block Common Exploits | włączone | włączone |
 
 Zakładka **SSL**: Request a new SSL Certificate (Let's Encrypt), Force SSL, HTTP/2.
 
 Domena musi mieć rekord DNS `A` wskazujący na host, na którym działa NPM.
-Host z NPM musi móc połączyć się z serwerem aplikacji na porcie 8080
-(sprawdź z hosta NPM: `curl http://192.168.1.20:8080/healthz`).
+Host z NPM musi móc połączyć się z serwerem aplikacji na porcie `HOST_PORT`
+(sprawdź z hosta NPM: `curl http://192.168.1.20:18040/healthz`).
 
 ## 3. Sprawdzenie
 

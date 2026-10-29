@@ -3,9 +3,10 @@ services:
     build: .
     image: magic-life:latest
     restart: unless-stopped
-    # Nginx Proxy Manager on ANOTHER host forwards to http://<this-host-ip>:${HOST_PORT}.
-    # Set HOST_BIND to this host's LAN/VPN IP so the plain-HTTP port is not public.
+    # Nginx Proxy Manager on ANOTHER host forwards to http://<HOST_BIND>:<HOST_PORT>.
+    # HOST_BIND must be this host's LAN/VPN IP. The default 127.0.0.1 keeps the plain-HTTP
+    # port private; note that ports published by Docker bypass ufw/firewalld rules.
     ports:
-      - "${HOST_BIND:-0.0.0.0}:${HOST_PORT:-8080}:8080"
+      - "${HOST_BIND:-127.0.0.1}:${HOST_PORT:-18040}:8080"
     environment:
       MAX_ROOMS: "500"
