@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "e2e": "playwright test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,6 +16,7 @@
     "preact": "^11.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@preact/preset-vite": "^2.10.6",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
