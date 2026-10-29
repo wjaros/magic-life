@@ -93,6 +93,17 @@ Pliki się nie pokrywają, więc scalanie powinno obejść się bez konfliktów.
 ### Faza 4: Poprawki i release
 - Orkiestrator (albo agent A/C ponownie) wdraża poprawki z Fazy 3, tag `v1.0`, deploy na Pages.
 
+### Modele agentów (wariant oszczędny)
+
+| Agent | Model |
+|---|---|
+| A: Core | Sonnet |
+| B: Timer | Haiku |
+| C: UI | Sonnet |
+| D: PWA | Haiku |
+| E: E2E | Haiku |
+| F: Review | Sonnet |
+
 ## 5. Graf zależności
 
 ```
