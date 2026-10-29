@@ -7,21 +7,30 @@ import { ErrorBoundary } from './ui/ErrorBoundary';
 import { onHistoryChange, setHistory } from './ui/store';
 import './ui/styles.css';
 
-try {
-  const loaded = storage.load();
-  setHistory(loaded ? pauseIfStale(loaded, loadLastSeen(), Date.now()) : null);
-} catch {
-  storage.clear();
-  setHistory(null);
-}
-markSeen();
-onHistoryChange((h) => (h ? saveSoon(h) : storage.clear()));
-initPwa();
-void host.discoverRelay();
+function mountHost() {
+  try {
+    const loaded = storage.load();
+    setHistory(loaded ? pauseIfStale(loaded, loadLastSeen(), Date.now()) : null);
+  } catch {
+    storage.clear();
+    setHistory(null);
+  }
+  markSeen();
+  onHistoryChange((h) => (h ? saveSoon(h) : storage.clear()));
+  initPwa();
+  void host.discoverRelay();
 
-render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>,
-  document.getElementById('app')!,
-);
+  render(
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>,
+    document.getElementById('app')!,
+  );
+}
+
+// ?join in the URL = this device is a remote (phone) for someone else's game: never touch the host save.
+if (new URLSearchParams(location.search).has('join')) {
+  import('./ui/remote/entry').then((m) => m.mountRemote(document.getElementById('app')!));
+} else {
+  mountHost();
+}

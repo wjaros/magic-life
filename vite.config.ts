@@ -34,7 +34,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    exclude: ['**/node_modules/**', '.claude/**', 'e2e/**'],
+    exclude: ['**/node_modules/**', '.claude/**', 'e2e/**', 'server/**'],
     environment: 'jsdom',
   },
 });
