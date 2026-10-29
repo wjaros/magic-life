@@ -17,6 +17,8 @@ function makePlayer(id: string, name: string, color: string, rotation: Player['r
     experience: 0,
     commanderDamage: {},
     conceded: false,
+    customCounters: [],
+    pinned: [],
     rotation,
   };
 }
@@ -275,5 +277,57 @@ describe('saveSoon maxWait', () => {
       vi.advanceTimersByTime(150);
     }
     expect(localStorage.getItem(KEY)).not.toBeNull();
+  });
+});
+
+describe('storage: pinned and custom counters', () => {
+  const wrap = (h: unknown) => JSON.stringify({ version: 1, history: h });
+  const stripped = (): unknown => {
+    const h = makeHistory(1);
+    const strip = (g: GameState) => ({
+      ...g,
+      players: g.players.map(({ customCounters: _c, pinned: _p, ...rest }) => rest),
+    });
+    return { past: h.past.map(strip), present: strip(h.present), future: [] };
+  };
+
+  it('round-trips counters and pins', () => {
+    const h = makeHistory(0);
+    h.present.players[0]!.customCounters = [{ id: 'c1', name: 'Skarby', value: 4 }];
+    h.present.players[0]!.pinned = ['energy', 'c1'];
+    storage.save(h);
+    expect(storage.load()).toEqual(h);
+  });
+
+  it('loads old saves without the new fields, migrating to empty arrays', () => {
+    localStorage.setItem(KEY, wrap(stripped()));
+    const loaded = storage.load();
+    expect(loaded).not.toBeNull();
+    for (const g of [...loaded!.past, loaded!.present]) {
+      for (const p of g.players) {
+        expect(p.customCounters).toEqual([]);
+        expect(p.pinned).toEqual([]);
+      }
+    }
+  });
+
+  it('drops malformed counters and invalid pins instead of rejecting', () => {
+    const h = makeHistory(0) as unknown as { present: { players: Record<string, unknown>[] } };
+    h.present.players[0]!.customCounters = [
+      { id: 'c1', name: 'ok', value: 2 },
+      { id: 'c1', name: 'dup', value: 1 },
+      { id: 5, name: 'bad', value: 1 },
+      { id: 'c3', name: 'nan', value: 'x' },
+      'junk',
+    ];
+    h.present.players[0]!.pinned = ['c1', 'c3', 'nope', 'c1', 'tax', 'energy'];
+    h.present.players[1]!.customCounters = 'oops';
+    h.present.players[1]!.pinned = 7;
+    localStorage.setItem(KEY, wrap(h));
+    const loaded = storage.load()!;
+    expect(loaded.present.players[0]!.customCounters).toEqual([{ id: 'c1', name: 'ok', value: 2 }]);
+    expect(loaded.present.players[0]!.pinned).toEqual(['c1', 'tax']);
+    expect(loaded.present.players[1]!.customCounters).toEqual([]);
+    expect(loaded.present.players[1]!.pinned).toEqual([]);
   });
 });

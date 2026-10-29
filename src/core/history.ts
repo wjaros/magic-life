@@ -28,6 +28,7 @@ function mergeKey(a: Action): string | null {
     case 'adjustLife': return `life:${a.playerId}`;
     case 'adjustPoison': return `poison:${a.playerId}`;
     case 'adjustCommanderDamage': return `cmd:${a.targetId}:${a.sourceId}:${a.slot}`;
+    case 'adjustCustomCounter': return `custom:${a.playerId}:${a.counterId}`;
     default: return null;
   }
 }

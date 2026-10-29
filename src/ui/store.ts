@@ -1,6 +1,6 @@
 import { computed, effect, signal } from '@preact/signals';
 import type { Action, ClockSnapshot, GameSettings, GameState, History, PlayerSetup } from '../core/types';
-import { createGame, dispatch, initHistory, redo, snapshot, undo } from './engine';
+import { createGame, reduce, dispatch, initHistory, redo, snapshot, undo } from './engine';
 
 /** Single source of truth. Persistence can subscribe via `onHistoryChange` or read `history` directly. */
 export const history = signal<History | null>(null);
@@ -27,16 +27,30 @@ export function startGame(players: PlayerSetup[], settings: GameSettings): void 
   screen.value = 'game';
 }
 
-/** Same players/settings, fresh counters. Clears undo history. */
+/** Same players/settings/counter names and pins, fresh values. Clears undo history. */
 export function resetGame(): void {
   const g = game.value;
   if (!g) return;
-  act({
-    type: 'newGame',
-    players: g.players.map((p) => ({ name: p.name, color: p.color, hasPartner: p.hasPartner })),
-    settings: g.settings,
-    now: Date.now(),
-  });
+  const fresh = createGame(
+    g.players.map((p) => ({
+      name: p.name,
+      color: p.color,
+      hasPartner: p.hasPartner,
+      customCounters: p.customCounters.map((c) => c.name),
+    })),
+    g.settings,
+    Date.now(),
+  );
+  // Recreated custom counters get ids c1..cn in their old order: restore the old pin selection.
+  const restored = g.players.reduce((st, p) => {
+    const ids = p.customCounters.map((c) => c.id);
+    const pinned = p.pinned.map((k) => {
+      const i = ids.indexOf(k);
+      return i < 0 ? k : `c${i + 1}`;
+    });
+    return reduce(st, { type: 'setPinned', playerId: p.id, pinned });
+  }, fresh);
+  history.value = initHistory(restored);
 }
 
 /** Hydrate from storage (integration hook). */

@@ -1,12 +1,53 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Player } from '../../core/types';
+import type { Action, PinKey, Player } from '../../core/types';
 import { formatMs, lossReason } from '../engine';
 import { act, game, snap, vibrate } from '../store';
 import { Rotated } from './Rotated';
 import { useHold } from '../useHold';
 import { REASON_LABEL } from './layout';
+import { isBuiltinKey, resolvePinned } from './counters';
 
 const BADGE_MS = 2000;
+
+function pinAction(p: Player, key: PinKey, delta: number): Action {
+  if (!isBuiltinKey(key)) return { type: 'adjustCustomCounter', playerId: p.id, counterId: key, delta };
+  switch (key) {
+    case 'energy': return { type: 'adjustEnergy', playerId: p.id, delta };
+    case 'experience': return { type: 'adjustExperience', playerId: p.id, delta };
+    case 'poison': return { type: 'adjustPoison', playerId: p.id, delta };
+    case 'tax': return { type: 'adjustCommanderCasts', playerId: p.id, slot: 0, delta };
+  }
+}
+
+const stop = (e: Event) => e.stopPropagation();
+
+/** One pinned counter: - [name/icon value] +. Its events never reach the life zones. */
+function PinnedCounter(props: { player: Player; pinKey: PinKey }) {
+  const p = props.player;
+  const info = resolvePinned(p, props.pinKey);
+  const step = (n: number) => {
+    act(pinAction(p, props.pinKey, n));
+    vibrate(10);
+  };
+  const minus = useHold(step, -1, { holdStep: 1, repeatMs: 250 });
+  const plus = useHold(step, 1, { holdStep: 1, repeatMs: 250 });
+  if (!info) return null;
+  const guard = (h: ReturnType<typeof useHold>) => ({
+    ...h,
+    onPointerDown(e: PointerEvent) { e.stopPropagation(); h.onPointerDown(e); },
+    onClick(e: MouseEvent) { e.stopPropagation(); h.onClick(e); },
+  });
+  return (
+    <div class="pin" onPointerDown={stop} onClick={stop}>
+      <button class="pin-btn" {...guard(minus)} aria-label={`${p.name}: ${info.label} minus`}>−</button>
+      <div class="pin-mid" aria-live="polite">
+        <span class="pin-label">{info.short}</span>
+        <span class="pin-val">{info.display}</span>
+      </div>
+      <button class="pin-btn" {...guard(plus)} aria-label={`${p.name}: ${info.label} plus`}>+</button>
+    </div>
+  );
+}
 
 export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) {
   const p = props.player;
@@ -55,7 +96,7 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
       style={{ '--pc': p.color }}
     >
       <Rotated rotation={p.rotation}>
-        <div class="panel-inner">
+        <div class={`panel-inner${p.pinned.length > 0 ? ' has-pins' : ''}`}>
           <div class="p-head">
             <div class="p-name">{p.name}</div>
             {active && <div class="p-turn">tura {formatMs(s.turnMs)}</div>}
@@ -76,6 +117,11 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
               </div>
             )}
           </div>
+          {p.pinned.length > 0 && (
+            <div class="pins" onPointerDown={stop} onClick={stop}>
+              {p.pinned.map((k) => <PinnedCounter key={k} player={p} pinKey={k} />)}
+            </div>
+          )}
           {reason && <div class="reason">{REASON_LABEL[reason]}</div>}
           <button class="stats" onClick={props.onOpenSheet} aria-label={`Liczniki gracza ${p.name}: trucizna ${p.poison}, podatek dowódcy ${tax}${p.hasPartner ? `/${tax2}` : ''}, czas ${formatMs(s.playerMs[p.id] ?? 0)}`}
           >

@@ -1,5 +1,8 @@
 import { useState } from 'preact/hooks';
+import { MAX_PINNED } from '../../core/types';
+import type { BuiltinCounter } from '../../core/types';
 import { game, screen, startGame } from '../store';
+import { BUILTIN_META, BUILTIN_ORDER, isBuiltinKey } from './counters';
 import { PALETTE } from './layout';
 
 const LIVES = [20, 30, 40];
@@ -27,11 +30,35 @@ export function SetupScreen() {
     prefill((i) => cur?.players[i]?.hasPartner, () => false),
   );
 
+  const [pins, setPins] = useState<BuiltinCounter[][]>(() =>
+    prefill((i) => cur?.players[i]?.pinned.filter(isBuiltinKey), () => []),
+  );
+  // Only pinned custom counters are carried over: they are what the setup row can show.
+  const [customs, setCustoms] = useState<string[][]>(() =>
+    prefill(
+      (i) => {
+        const pl = cur?.players[i];
+        return pl?.pinned
+          .map((k) => pl.customCounters.find((c) => c.id === k)?.name)
+          .filter((n): n is string => n !== undefined);
+      },
+      () => [],
+    ),
+  );
+  const [drafts, setDrafts] = useState<string[]>(() => prefill(() => undefined, () => ''));
+
   const set = <T,>(arr: T[], i: number, v: T) => arr.map((x, j) => (j === i ? v : x));
   const pickColor = (i: number, c: string) => {
     const j = colors.findIndex((x, k) => x === c && k < count && k !== i);
     // swap with whoever has it so colors stay distinct
     setColors(colors.map((x, k) => (k === i ? c : k === j ? colors[i] : x)));
+  };
+
+  const addCustom = (i: number) => {
+    const n = drafts[i].trim();
+    if (!n || pins[i].length + customs[i].length >= MAX_PINNED) return;
+    setCustoms(set(customs, i, [...customs[i], n]));
+    setDrafts(set(drafts, i, ''));
   };
 
   const start = () => {
@@ -40,6 +67,8 @@ export function SetupScreen() {
         name: names[i].trim() || `Gracz ${i + 1}`,
         color: colors[i],
         hasPartner: partners[i],
+        pinned: pins[i],
+        customCounters: customs[i],
       })),
       { startingLife: life, turnLimitMs: limit == null ? null : limit * 60_000 },
     );
@@ -89,6 +118,59 @@ export function SetupScreen() {
               />
               Partner
             </label>
+            <div class="pinsetup">
+              <div class="pinsetup-title">
+                Liczniki na panelu
+                {pins[i].length + customs[i].length >= MAX_PINNED && <span class="hint"> (maks. {MAX_PINNED})</span>}
+              </div>
+              <div class="chips small">
+                {BUILTIN_ORDER.map((k) => {
+                  const on = pins[i].includes(k);
+                  const full = pins[i].length + customs[i].length >= MAX_PINNED;
+                  return (
+                    <button
+                      key={k}
+                      class={`chip${on ? ' on' : ''}`}
+                      aria-pressed={on}
+                      disabled={!on && full}
+                      title={!on && full ? 'maks. 2' : undefined}
+                      onClick={() => setPins(set(pins, i, on ? pins[i].filter((x) => x !== k) : [...pins[i], k]))}
+                    >
+                      {k === 'tax' ? 'Tax' : `${BUILTIN_META[k].label} ${BUILTIN_META[k].short}`}
+                    </button>
+                  );
+                })}
+                {customs[i].map((n, j) => (
+                  <button
+                    key={`${j}-${n}`}
+                    class="chip on custom"
+                    aria-label={`Usuń licznik ${n}`}
+                    onClick={() => setCustoms(set(customs, i, customs[i].filter((_, k) => k !== j)))}
+                  >
+                    <span class="chip-text">{n}</span> ✕
+                  </button>
+                ))}
+              </div>
+              <div class="addc">
+                <input
+                  class="cname-input"
+                  value={drafts[i]}
+                  maxLength={24}
+                  placeholder="Własny licznik, np. Skarby"
+                  aria-label={`Własny licznik gracza ${i + 1}`}
+                  onInput={(e) => setDrafts(set(drafts, i, (e.currentTarget as HTMLInputElement).value))}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addCustom(i); }}
+                />
+                <button
+                  class="btn"
+                  aria-label={`Dodaj licznik gracza ${i + 1}`}
+                  disabled={!drafts[i].trim() || pins[i].length + customs[i].length >= MAX_PINNED}
+                  onClick={() => addCustom(i)}
+                >
+                  Dodaj
+                </button>
+              </div>
+            </div>
             <div class="swatches">
               {PALETTE.map((c) => (
                 <button

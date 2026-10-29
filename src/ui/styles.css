@@ -63,6 +63,13 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .swatches { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 .swatch { width: 48px; height: 48px; border-radius: 50%; border: 3px solid transparent; padding: 0; }
 .swatch.on { border-color: #fff; box-shadow: 0 0 0 2px #000 inset; }
+.pinsetup { grid-column: 1 / -1; }
+.pinsetup-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.chips.small .chip { min-height: 44px; min-width: 0; padding: 0 12px; font-size: 15px; }
+.chip:disabled { opacity: .4; }
+.chip.custom { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.chip-text { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pinsetup .addc { margin-top: 8px; }
 .start { width: 100%; margin-top: 24px; min-height: 60px; font-size: 22px; }
 
 /* ---------- game layout ---------- */
@@ -139,6 +146,25 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .stat { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .stat.more { opacity: .6; }
 
+/* pinned counters: leave room for the row below the life total */
+.has-pins .life { font-size: min(42cqw, calc(44cqh - 36px)); }
+.rot.swap .has-pins .life { font-size: min(38cqw, calc(40cqh - 30px)); }
+.rot.swap .has-pins .life-wrap { padding-top: 4px; }
+.rot.swap .has-pins .p-head { bottom: 112px; }
+/* pinned counters */
+.pins {
+  position: relative; z-index: 3; width: 100%; flex: none; display: flex; gap: 6px; padding: 0 6px 4px;
+  justify-content: center;
+}
+.pin { flex: 1 1 0; min-width: 0; max-width: 220px; display: flex; align-items: center; gap: 2px; border-radius: 12px; background: rgba(0,0,0,.35); }
+.pin-btn {
+  flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px;
+  background: rgba(255,255,255,.1); font-size: 24px; font-weight: 700; touch-action: none;
+}
+.pin-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; line-height: 1.05; pointer-events: none; }
+.pin-label { max-width: 100%; font-size: 11px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pin-val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* ---------- turn bar ---------- */
 .turnbar {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10;
@@ -183,14 +209,35 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 .sheet-head { display: flex; align-items: center; gap: 12px; padding: 6px 0; position: sticky; top: 0; background: var(--surface); z-index: 1; }
 .sheet-head b { flex: 1; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sheet-life { font-size: 24px; font-weight: 800; }
-.sheet section { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); column-gap: 20px; }
+.sheet section { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); column-gap: 20px; }
 .rot.swap .sheet { max-width: 760px; }
 .sheet h3 { grid-column: 1 / -1; margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .srow { display: flex; align-items: center; gap: 8px; min-height: 52px; border-bottom: 1px solid rgba(255,255,255,.07); }
 .slabel { flex: 1; font-size: 15px; display: flex; align-items: center; gap: 8px; min-width: 0; }
 .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
-.sbtn { width: 52px; height: 48px; border-radius: 12px; border: 1px solid #3a3d44; background: var(--surface2); font-size: 26px; padding: 0; }
+.sbtn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid #3a3d44; background: var(--surface2); font-size: 26px; padding: 0; }
 .sval { min-width: 36px; text-align: center; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+/* pin toggle + custom counters (sheet) */
+.pinbtn, .ibtn {
+  flex: none; width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1px solid transparent;
+  background: transparent; font-size: 18px; opacity: .45;
+}
+.pinbtn.on { opacity: 1; background: #f0c64a33; border-color: #f0c64a; }
+.pinbtn:disabled { opacity: .15; }
+.ibtn { opacity: .8; }
+.crow {
+  display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; column-gap: 4px;
+  padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.cname { font-size: 15px; font-weight: 600; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cname-input {
+  min-height: 44px; min-width: 0; padding: 0 10px; border-radius: 10px; border: 1px solid #3a3d44;
+  background: #121316; color: var(--fg); font-size: 16px;
+}
+.cstep { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.addc { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 8px; }
+.addc .cname-input { flex: 1; }
+.hint { grid-column: 1 / -1; margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 .sheet .toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .toggles .btn { flex: 1 1 120px; }
 .menu { pointer-events: auto; width: min(320px, 90vw); background: var(--surface); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }

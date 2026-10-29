@@ -1,8 +1,39 @@
 import { createClock, nextTurn, pause, setActive, start } from './clockAdapter';
 import { alivePlayers, lossReason } from './rules';
+import { MAX_PINNED } from './types';
 import type {
-  Action, GameSettings, GameState, Player, PlayerId, PlayerSetup, Rotation,
+  Action, BuiltinCounter, CustomCounter, GameSettings, GameState, PinKey, Player, PlayerId,
+  PlayerSetup, Rotation,
 } from './types';
+
+export const BUILTIN_COUNTERS: readonly BuiltinCounter[] = ['energy', 'experience', 'poison', 'tax'];
+export const MAX_COUNTER_NAME = 24;
+
+const isBuiltin = (k: string): k is BuiltinCounter =>
+  (BUILTIN_COUNTERS as readonly string[]).includes(k);
+
+/** Trimmed and capped; '' when unusable. */
+export function cleanCounterName(name: string): string {
+  return Array.from(name.trim()).slice(0, MAX_COUNTER_NAME).join('').trim();
+}
+
+function nextCounterId(counters: CustomCounter[]): string {
+  let max = 0;
+  for (const c of counters) {
+    const m = /^c(\d+)$/.exec(c.id);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return `c${max + 1}`;
+}
+
+function sanitizePinned(keys: readonly PinKey[], counters: CustomCounter[]): PinKey[] {
+  const out: PinKey[] = [];
+  for (const k of keys) {
+    if (out.includes(k)) continue;
+    if (isBuiltin(k) || counters.some((c) => c.id === k)) out.push(k);
+  }
+  return out.slice(0, MAX_PINNED);
+}
 
 /**
  * Seat rotation per player index, for a phone lying flat in the table center.
@@ -40,6 +71,15 @@ export function createGame(
   const built: Player[] = players.map((setup, i) => {
     const commanderDamage: Record<PlayerId, [number, number]> = {};
     for (const other of ids) if (other !== ids[i]) commanderDamage[other] = [0, 0];
+    const customCounters: CustomCounter[] = [];
+    for (const raw of setup.customCounters ?? []) {
+      const name = cleanCounterName(raw);
+      if (name) customCounters.push({ id: nextCounterId(customCounters), name, value: 0 });
+    }
+    const pinned = sanitizePinned(
+      [...(setup.pinned ?? []), ...customCounters.map((c) => c.id)],
+      customCounters,
+    );
     return {
       id: ids[i] as PlayerId,
       name: setup.name,
@@ -52,6 +92,8 @@ export function createGame(
       experience: 0,
       commanderDamage,
       conceded: false,
+      customCounters,
+      pinned,
       rotation: rotations[i] ?? 0,
     };
   });
@@ -175,6 +217,55 @@ function reduceInner(state: GameState, action: Action): GameState {
       return mapPlayer(state, action.playerId, (p) =>
         p.hasPartner === action.hasPartner ? p : { ...p, hasPartner: action.hasPartner },
       );
+
+    case 'setPinned':
+      return mapPlayer(state, action.playerId, (p) => {
+        const pinned = sanitizePinned(action.pinned, p.customCounters);
+        return pinned.length === p.pinned.length && pinned.every((k, i) => k === p.pinned[i])
+          ? p
+          : { ...p, pinned };
+      });
+    case 'addCustomCounter':
+      return mapPlayer(state, action.playerId, (p) => {
+        const name = cleanCounterName(action.name);
+        if (!name) return p;
+        const id = nextCounterId(p.customCounters);
+        return {
+          ...p,
+          customCounters: [...p.customCounters, { id, name, value: 0 }],
+          pinned: p.pinned.length < MAX_PINNED ? [...p.pinned, id] : p.pinned,
+        };
+      });
+    case 'renameCustomCounter':
+      return mapPlayer(state, action.playerId, (p) => {
+        const name = cleanCounterName(action.name);
+        const c = p.customCounters.find((x) => x.id === action.counterId);
+        if (!name || !c || c.name === name) return p;
+        return {
+          ...p,
+          customCounters: p.customCounters.map((x) => (x === c ? { ...x, name } : x)),
+        };
+      });
+    case 'removeCustomCounter':
+      return mapPlayer(state, action.playerId, (p) => {
+        if (!p.customCounters.some((x) => x.id === action.counterId)) return p;
+        return {
+          ...p,
+          customCounters: p.customCounters.filter((x) => x.id !== action.counterId),
+          pinned: p.pinned.filter((k) => k !== action.counterId),
+        };
+      });
+    case 'adjustCustomCounter':
+      return mapPlayer(state, action.playerId, (p) => {
+        const c = p.customCounters.find((x) => x.id === action.counterId);
+        if (!c) return p;
+        const v = nonNeg(c.value + action.delta);
+        if (v === c.value) return p;
+        return {
+          ...p,
+          customCounters: p.customCounters.map((x) => (x === c ? { ...x, value: v } : x)),
+        };
+      });
 
     case 'clockStart':
       return { ...state, clock: start(state.clock, action.now) };

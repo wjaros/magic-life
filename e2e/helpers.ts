@@ -27,3 +27,8 @@ export async function closeSheet(page: Page): Promise<void> {
   await page.locator('.sheet').getByRole('button', { name: 'Gotowe' }).click();
   await expect(page.locator('.sheet')).toHaveCount(0);
 }
+
+/** The i-th player row on the setup screen (0-based). */
+export function setupRow(page: Page, index: number): Locator {
+  return page.locator('.prow').nth(index);
+}

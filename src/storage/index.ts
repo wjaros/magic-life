@@ -1,5 +1,6 @@
 import type { StorageApi } from '../core/api';
 import { dispatch } from '../core/history';
+import { MAX_PINNED } from '../core/types';
 import type { GameState, History } from '../core/types';
 
 const STORAGE_KEY = 'magic-life/v1';
@@ -29,6 +30,38 @@ const isNumOrNull = (v: unknown): v is number | null => v === null || isNum(v);
 const isStrOrNull = (v: unknown): v is string | null => v === null || typeof v === 'string';
 const isPair = (v: unknown): boolean => Array.isArray(v) && v.length === 2 && v.every(isNum);
 
+const BUILTIN_PINS = ['energy', 'experience', 'poison', 'tax'];
+
+/**
+ * Migrates/sanitizes the counter fields of a raw player in place of rejecting the save:
+ * saves written before pinned/custom counters existed get `[]`; malformed entries are dropped.
+ */
+function normalizePlayer(v: unknown): unknown {
+  if (!isRecord(v)) return v;
+  const seen = new Set<string>();
+  const customCounters = (Array.isArray(v.customCounters) ? v.customCounters : []).filter(
+    (c): c is { id: string; name: string; value: number } => {
+      if (!isRecord(c) || typeof c.id !== 'string' || typeof c.name !== 'string' || !isNum(c.value)) {
+        return false;
+      }
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    },
+  );
+  const pinned: string[] = [];
+  for (const k of Array.isArray(v.pinned) ? v.pinned : []) {
+    if (typeof k !== 'string' || pinned.includes(k)) continue;
+    if (BUILTIN_PINS.includes(k) || seen.has(k)) pinned.push(k);
+  }
+  return { ...v, customCounters, pinned: pinned.slice(0, MAX_PINNED) };
+}
+
+function normalizeGame(v: unknown): unknown {
+  if (!isRecord(v) || !Array.isArray(v.players)) return v;
+  return { ...v, players: v.players.map(normalizePlayer) };
+}
+
 function isPlayer(v: unknown): boolean {
   if (!isRecord(v)) return false;
   return (
@@ -43,6 +76,8 @@ function isPlayer(v: unknown): boolean {
     typeof v.hasPartner === 'boolean' &&
     typeof v.conceded === 'boolean' &&
     (v.rotation === 0 || v.rotation === 90 || v.rotation === 180 || v.rotation === 270) &&
+    Array.isArray(v.customCounters) &&
+    Array.isArray(v.pinned) &&
     isRecord(v.commanderDamage) &&
     Object.values(v.commanderDamage).every(isPair)
   );
@@ -149,7 +184,14 @@ export const storage: StorageApi = {
       if (raw === null) return null;
       const parsed: unknown = JSON.parse(raw);
       if (!isRecord(parsed) || parsed.version !== SCHEMA_VERSION) return null;
-      const history = parsed.history;
+      const raw0 = parsed.history;
+      if (!isRecord(raw0)) return null;
+      const history = {
+        ...raw0,
+        past: Array.isArray(raw0.past) ? raw0.past.map(normalizeGame) : raw0.past,
+        present: normalizeGame(raw0.present),
+        future: Array.isArray(raw0.future) ? raw0.future.map(normalizeGame) : raw0.future,
+      };
       if (!isHistory(history)) return null;
       // Invalid undo/redo entries are dropped rather than rejecting the whole game.
       return {
