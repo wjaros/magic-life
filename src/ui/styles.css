@@ -149,7 +149,7 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 /* pinned counters: leave room for the row below the life total */
 .has-pins .life { font-size: min(42cqw, calc(44cqh - 36px)); }
 .rot.swap .has-pins .life { font-size: min(38cqw, calc(40cqh - 30px)); }
-.rot.swap .has-pins .life-wrap { padding-top: 4px; }
+.rot.swap .has-pins .life-wrap { padding-top: 4px; align-items: flex-end; }
 .rot.swap .has-pins .p-head { bottom: 112px; }
 /* pinned counters */
 .pins {
