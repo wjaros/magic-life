@@ -35,10 +35,10 @@ describe('createGame', () => {
 
   it('assigns deterministic rotations for 1-8 players', () => {
     expect(rotationsFor(2)).toEqual([180, 0]);
-    expect(rotationsFor(3)).toEqual([180, 0, 0]);
-    expect(rotationsFor(4)).toEqual([180, 180, 0, 0]);
-    expect(rotationsFor(5)).toEqual([180, 180, 0, 0, 270]);
-    expect(rotationsFor(6)).toEqual([180, 180, 180, 0, 0, 0]);
+    expect(rotationsFor(3)).toEqual([180, 90, 270]);
+    expect(rotationsFor(4)).toEqual([90, 270, 90, 270]);
+    expect(rotationsFor(5)).toEqual([90, 270, 90, 270, 0]);
+    expect(rotationsFor(6)).toEqual([90, 270, 90, 270, 90, 270]);
     expect(rotationsFor(1)).toEqual([0]);
     expect(rotationsFor(8)).toHaveLength(8);
     expect(mk(2).players.map((p) => p.rotation)).toEqual([180, 0]);

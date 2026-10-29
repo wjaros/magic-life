@@ -27,7 +27,7 @@ export function startGame(players: PlayerSetup[], settings: GameSettings): void 
   screen.value = 'game';
 }
 
-/** Same players/settings, fresh counters (undoable). */
+/** Same players/settings, fresh counters. Clears undo history. */
 export function resetGame(): void {
   const g = game.value;
   if (!g) return;

@@ -7,22 +7,22 @@ import type {
 /**
  * Seat rotation per player index, for a phone lying flat in the table center.
  * 180 = seat on the far side (reads upside down from the near side), 0 = near side,
- * 90/270 = left/right table ends. Deterministic per index; the UI lays out by index.
+ * 90/270 = left/right long sides. Must match the grid cells in src/ui/components/layout.ts.
  *   1: [0]
  *   2: [180, 0]
- *   3: [180, 0, 0]
- *   4: [180, 180, 0, 0]
- *   5: [180, 180, 0, 0, 270]
- *   6: [180, 180, 180, 0, 0, 0]
+ *   3: [180, 90, 270]
+ *   4: [90, 270, 90, 270]
+ *   5: [90, 270, 90, 270, 0]
+ *   6: [90, 270, 90, 270, 90, 270]
  * More than 6 players cycle through the 6-player table.
  */
 export const ROTATIONS: Record<number, Rotation[]> = {
   1: [0],
   2: [180, 0],
-  3: [180, 0, 0],
-  4: [180, 180, 0, 0],
-  5: [180, 180, 0, 0, 270],
-  6: [180, 180, 180, 0, 0, 0],
+  3: [180, 90, 270],
+  4: [90, 270, 90, 270],
+  5: [90, 270, 90, 270, 0],
+  6: [90, 270, 90, 270, 90, 270],
 };
 
 export function rotationsFor(count: number): Rotation[] {
