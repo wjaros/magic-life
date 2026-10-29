@@ -13,25 +13,25 @@ cd magic-life
 **Wariant A: Nginx Proxy Manager na innym hoście** (domyślny):
 
 ```bash
-# IP tego serwera w sieci, którą widzi NPM (LAN / VPN, np. Tailscale/WireGuard)
-export HOST_BIND=192.168.1.20
-export HOST_PORT=18040             # dowolny wolny port: ss -tlnp | grep 18040
+export HOST_PORT=18040   # dowolny wolny port: ss -tlnp | grep 18040
 docker compose up -d --build
 ```
 
-Ten port serwuje zwykłe HTTP, więc nie może być widoczny z internetu. Zabezpiecza go
-`HOST_BIND`: kontener nasłuchuje tylko na podanym adresie z sieci lokalnej/VPN
-(domyślnie `127.0.0.1`, czyli nigdzie poza tym serwerem).
+Kontener słucha na wszystkich adresach serwera (`0.0.0.0`), więc NPM z innego hosta
+połączy się od razu. Ten port serwuje zwykłe HTTP z pominięciem NPM:
 
-Uwaga: **ufw/firewalld nie chronią portów wystawionych przez Dockera** — Docker dopisuje
-własne reguły iptables przed regułami ufw. Jeśli musisz bindować na publiczny adres,
-filtruj w łańcuchu `DOCKER-USER`, np.:
+- serwer w sieci domowej za routerem (bez przekierowania portu) — nic nie trzeba robić;
+- serwer z publicznym IP (VPS) — port jest widoczny z internetu. Aplikacja nie ma kont
+  ani haseł, więc ryzyko jest małe, ale możesz go ograniczyć:
+  - `export HOST_BIND=192.168.1.20` — słuchaj tylko na adresie LAN/VPN (np. Tailscale),
+  - albo reguła w łańcuchu `DOCKER-USER` (uwaga: **ufw/firewalld nie filtrują portów
+    wystawionych przez Dockera**):
 
-```bash
-sudo iptables -I DOCKER-USER -p tcp --dport 8080 ! -s <IP-hosta-NPM> -j DROP
-```
+    ```bash
+    sudo iptables -I DOCKER-USER -p tcp --dport 8080 ! -s <IP-hosta-NPM> -j DROP
+    ```
 
-(`--dport` to port w kontenerze, 8080, bo reguła działa już po przekierowaniu).
+    (`--dport` to port w kontenerze, 8080, bo reguła działa już po przekierowaniu).
 
 **Wariant B: NPM na tym samym hoście** (bez wystawiania portu, przez wspólną sieć Dockera; wymaga Docker Compose 2.24+):
 
