@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Action, PinKey, Player } from '../../core/types';
 import { formatMs, lossReason } from '../engine';
+import { host } from '../../net/host';
 import { act, game, snap, vibrate } from '../store';
 import { firstBadge, rollHighlight, rolling } from '../firstPlayer';
 import { Rotated } from './Rotated';
@@ -56,6 +57,9 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
   const s = snap.value!;
   const reason = lossReason(p);
   const active = s.activePlayerId === p.id;
+  const seatClient = host.seats.value[p.id];
+  // A claimed seat whose peer is unknown (host reloaded, phone not back yet) counts as offline.
+  const seatPeer = seatClient ? { online: !!host.peers.value.get(seatClient)?.online } : null;
 
   // transient delta badge
   const [delta, setDelta] = useState(0);
@@ -104,6 +108,7 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
         <div class={`panel-inner${p.pinned.length > 0 ? ' has-pins' : ''}`}>
           <div class="p-head">
             <div class="p-name">{p.name}</div>
+            {seatPeer && <span class={`p-remote${seatPeer.online ? '' : ' off'}`} title={seatPeer.online ? 'Telefon połączony' : 'Telefon offline'} role="img" aria-label={seatPeer.online ? 'Telefon połączony' : 'Telefon offline'}>📱</span>}
             {active && <div class="p-turn">tura {formatMs(s.turnMs)}</div>}
           </div>
           <div

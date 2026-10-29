@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { host } from '../../net/host';
 import { formatMs } from '../engine';
 import { pickedFor, rollFirstPlayer, rolling } from '../firstPlayer';
+import { ConnectSheet } from './ConnectSheet';
 import { act, canRedo, canUndo, game, redoAct, resetGame, screen, snap, undoAct, vibrate } from '../store';
 
 export function TurnBar() {
@@ -8,6 +10,8 @@ export function TurnBar() {
   const s = snap.value!;
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState<null | 'reset'>(null);
+  const [connect, setConnect] = useState(false);
+  const hosting = host.hosting.value;
 
   // one buzz when the turn limit is crossed
   const wasOver = useRef(false);
@@ -28,7 +32,10 @@ export function TurnBar() {
     <>
       <div class={`turnbar${g.players.length <= 3 ? ' wide' : ''}${s.overTurnLimit ? ' warn' : ''}${s.running ? '' : ' paused'}`}>
         <div class="tb-info">
-          <span class="tb-time">{formatMs(s.gameMs)}</span>
+          <span class="tb-time">
+            {formatMs(s.gameMs)}
+            {hosting && <span class={`conn-dot ${host.status.value}`} role="status" aria-label={`Telefony: ${host.status.value}`} />}
+          </span>
           <span class="tb-turn">Tura {s.turn}</span>
           {limit != null && (
             <span class="tb-limit">{formatMs(s.turnMs)} / {formatMs(limit)}</span>
@@ -50,6 +57,11 @@ export function TurnBar() {
           <div class="menu" onClick={(e) => e.stopPropagation()}>
             <h2>Menu</h2>
             <button class="btn" onClick={roll} disabled={rolling.value}>🎲 Losuj pierwszego</button>
+            {host.relay.value && (
+              <button class="btn" onClick={() => { closeMenu(); host.startHosting(); setConnect(true); }}>
+                📱 Połącz telefony
+              </button>
+            )}
             <button class="btn" onClick={() => { redoAct(); }} disabled={!canRedo.value}>↷ Ponów</button>
             {g.players.length > 2 && (
               <button
@@ -75,6 +87,7 @@ export function TurnBar() {
           </div>
         </div>
       )}
+      {connect && <ConnectSheet onClose={() => setConnect(false)} />}
     </>
   );
 }

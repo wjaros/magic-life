@@ -1,4 +1,5 @@
 import { render } from 'preact';
+import { host } from './net/host';
 import { initPwa } from './pwa';
 import { loadLastSeen, markSeen, pauseIfStale, saveSoon, storage } from './storage';
 import { App } from './ui/App';
@@ -16,6 +17,7 @@ try {
 markSeen();
 onHistoryChange((h) => (h ? saveSoon(h) : storage.clear()));
 initPwa();
+void host.discoverRelay();
 
 render(
   <ErrorBoundary>
