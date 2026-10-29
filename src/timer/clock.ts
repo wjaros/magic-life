@@ -104,6 +104,21 @@ export function setActive(clock: ClockState, playerId: PlayerId, now: number): C
   };
 }
 
+/**
+ * Chooses the starting player: active player set, turn back to 1, turn timer reset.
+ * Running state is kept (the running segment is folded and restarted at `now`).
+ */
+export function pickFirst(clock: ClockState, playerId: PlayerId, now: number): ClockState {
+  const folded = fold(clock, now);
+  return {
+    ...folded,
+    activePlayerId: playerId,
+    turn: 1,
+    turnElapsedMs: 0,
+    segmentStartedAt: folded.running ? now : folded.segmentStartedAt,
+  };
+}
+
 /** Live, display-ready values at `now`. Turn-limit check uses `turnLimitMs` (null = none). */
 export function snapshot(
   clock: ClockState,

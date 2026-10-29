@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Action, PinKey, Player } from '../../core/types';
 import { formatMs, lossReason } from '../engine';
+import { host } from '../../net/host';
 import { act, game, snap, vibrate } from '../store';
+import { firstBadge, rollHighlight, rolling } from '../firstPlayer';
 import { Rotated } from './Rotated';
 import { useHold } from '../useHold';
 import { REASON_LABEL } from './layout';
@@ -55,6 +57,9 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
   const s = snap.value!;
   const reason = lossReason(p);
   const active = s.activePlayerId === p.id;
+  const seatClient = host.seats.value[p.id];
+  // A claimed seat whose peer is unknown (host reloaded, phone not back yet) counts as offline.
+  const seatPeer = seatClient ? { online: !!host.peers.value.get(seatClient)?.online } : null;
 
   // transient delta badge
   const [delta, setDelta] = useState(0);
@@ -89,16 +94,21 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
   const tax = p.commanderCasts[0] * 2;
   const tax2 = p.commanderCasts[1] * 2;
   const warnTurn = active && s.overTurnLimit;
+  const spinning = rolling.value && firstBadge.value === null;
+  const lit = rollHighlight.value === p.id;
+  const badge = firstBadge.value === p.id;
 
   return (
     <div
-      class={`panel${reason ? ' out' : ''}${active ? ' active' : ''}${warnTurn ? ' over' : ''}`}
+      class={`panel${reason ? ' out' : ''}${active && !spinning ? ' active' : ''}${warnTurn ? ' over' : ''}${lit ? ' roll-hit' : ''}${badge ? ' first' : ''}`}
       style={{ '--pc': p.color }}
+      data-rotation={p.rotation}
     >
       <Rotated rotation={p.rotation}>
         <div class={`panel-inner${p.pinned.length > 0 ? ' has-pins' : ''}`}>
           <div class="p-head">
             <div class="p-name">{p.name}</div>
+            {seatPeer && <span class={`p-remote${seatPeer.online ? '' : ' off'}`} title={seatPeer.online ? 'Telefon połączony' : 'Telefon offline'} role="img" aria-label={seatPeer.online ? 'Telefon połączony' : 'Telefon offline'}>📱</span>}
             {active && <div class="p-turn">tura {formatMs(s.turnMs)}</div>}
           </div>
           <div
@@ -122,6 +132,7 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
               {p.pinned.map((k) => <PinnedCounter key={k} player={p} pinKey={k} />)}
             </div>
           )}
+          {badge && <div class="first-badge" role="status">Zaczynasz!</div>}
           {reason && <div class="reason">{REASON_LABEL[reason]}</div>}
           <button class="stats" onClick={props.onOpenSheet} aria-label={`Liczniki gracza ${p.name}: trucizna ${p.poison}, podatek dowódcy ${tax}${p.hasPartner ? `/${tax2}` : ''}, czas ${formatMs(s.playerMs[p.id] ?? 0)}`}
           >

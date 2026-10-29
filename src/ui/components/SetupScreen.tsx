@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks';
+import { setSoundEnabled, soundEnabled } from '../sound';
 import { MAX_PINNED } from '../../core/types';
-import type { BuiltinCounter } from '../../core/types';
+import type { BuiltinCounter, Seating } from '../../core/types';
 import { game, screen, startGame } from '../store';
 import { BUILTIN_META, BUILTIN_ORDER, isBuiltinKey } from './counters';
 import { PALETTE } from './layout';
@@ -13,6 +14,20 @@ function prefill<T>(fromGame: (i: number) => T | undefined, fallback: (i: number
   return Array.from({ length: 6 }, (_, i) => fromGame(i) ?? fallback(i));
 }
 
+/** Phone (portrait rectangle) with dots marking where players sit. */
+function SeatIcon(props: { seating: Seating }) {
+  const ends = props.seating === 'ends';
+  const dots: Array<[number, number]> = ends
+    ? [[12, 3], [12, 33]]
+    : [[3, 12], [3, 24], [21, 12], [21, 24]];
+  return (
+    <svg class="seat-icon" viewBox="0 0 24 36" width="24" height="36" aria-hidden="true">
+      <rect x="6" y="6" width="12" height="24" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" />
+      {dots.map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="2.2" fill="currentColor" />)}
+    </svg>
+  );
+}
+
 export function SetupScreen() {
   const cur = game.peek();
   const [count, setCount] = useState(() => cur ? Math.min(6, Math.max(2, cur.players.length)) : 4);
@@ -20,6 +35,7 @@ export function SetupScreen() {
   const [limit, setLimit] = useState<number | null>(() =>
     cur?.settings.turnLimitMs != null ? cur.settings.turnLimitMs / 60_000 : null,
   );
+  const [seating, setSeating] = useState<Seating>(() => cur?.settings.seating ?? 'sides');
   const [names, setNames] = useState<string[]>(() =>
     prefill((i) => cur?.players[i]?.name, (i) => `Gracz ${i + 1}`),
   );
@@ -70,7 +86,7 @@ export function SetupScreen() {
         pinned: pins[i],
         customCounters: customs[i],
       })),
-      { startingLife: life, turnLimitMs: limit == null ? null : limit * 60_000 },
+      { startingLife: life, turnLimitMs: limit == null ? null : limit * 60_000, seating },
     );
   };
 
@@ -98,6 +114,34 @@ export function SetupScreen() {
           <button key={label} class={`chip${limit === v ? ' on' : ''}`} onClick={() => setLimit(v)}>{label}</button>
         ))}
       </div>
+      <div class="chips">
+        <button
+          class={`chip${soundEnabled.value ? ' on' : ''}`}
+          role="switch"
+          aria-checked={soundEnabled.value}
+          onClick={() => setSoundEnabled(!soundEnabled.value)}
+        >🔔 Sygnały dźwiękowe</button>
+      </div>
+
+      {count > 2 && (
+        <>
+          <h2>Gracze siedzą:</h2>
+          <div class="chips" role="group" aria-label="Gracze siedzą">
+            {([['sides', 'Wzdłuż'], ['ends', 'Na końcach']] as const).map(([v, label]) => (
+              <button
+                key={v}
+                class={`chip seat${seating === v ? ' on' : ''}`}
+                aria-pressed={seating === v}
+                title={v === 'sides' ? 'Przy dłuższych krawędziach telefonu' : 'Przy krótszych krawędziach telefonu'}
+                onClick={() => setSeating(v)}
+              >
+                <SeatIcon seating={v} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <h2>Gracze</h2>
       <div class="plist">

@@ -1,1 +1,1 @@
-export { createClock, start, pause, nextTurn, setActive } from '../timer/clock';
+export { createClock, start, pause, nextTurn, setActive, pickFirst } from '../timer/clock';

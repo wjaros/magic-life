@@ -89,6 +89,15 @@ describe('history', () => {
     expect(h.present.clock).toBe(clock);
   });
 
+  it('pickFirstPlayer is a clock action: not pushed to undo history', () => {
+    let h = dispatch(mk(), { type: 'adjustLife', playerId: 'p1', delta: -3 });
+    h = dispatch(h, { type: 'pickFirstPlayer', playerId: 'p2', now: 10 });
+    expect(h.past).toHaveLength(1);
+    expect(h.present.clock.activePlayerId).toBe('p2');
+    h = undo(h);
+    expect(h.present.clock.activePlayerId).toBe('p2');
+  });
+
   it('clock actions keep the redo stack', () => {
     let h = dispatch(mk(), { type: 'adjustLife', playerId: 'p1', delta: -3 });
     h = undo(h);

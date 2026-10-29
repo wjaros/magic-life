@@ -8,6 +8,12 @@ export type CommanderSlot = 0 | 1;
 
 export type Rotation = 0 | 90 | 180 | 270;
 
+/**
+ * Where players sit around a phone lying on the table:
+ * 'sides' = along the long edges, 'ends' = at the two short edges.
+ */
+export type Seating = 'sides' | 'ends';
+
 /** A counter shown permanently on the player panel with its own −/+ buttons. */
 export type BuiltinCounter = 'energy' | 'experience' | 'poison' | 'tax';
 /** Built-in counter name, or the id of one of the player's custom counters. */
@@ -52,6 +58,8 @@ export interface GameSettings {
   startingLife: number;
   /** Optional per-turn limit in ms; null = no limit. */
   turnLimitMs: number | null;
+  /** Seating layout; undefined = 'sides' (saves from before this option). */
+  seating?: Seating;
 }
 
 export interface GameState {
@@ -101,10 +109,16 @@ export type Action =
   | { type: 'renameCustomCounter'; playerId: PlayerId; counterId: string; name: string }
   | { type: 'removeCustomCounter'; playerId: PlayerId; counterId: string }
   | { type: 'adjustCustomCounter'; playerId: PlayerId; counterId: string; delta: number }
+  /** Recomputes every player's rotation from the seating table for the current player count. */
+  | { type: 'setSeating'; seating: Seating }
+  /** Manual per-tile override: rotation += 90 (mod 360). */
+  | { type: 'rotatePlayer'; playerId: PlayerId }
   | { type: 'clockStart'; now: number }
   | { type: 'clockPause'; now: number }
   | { type: 'clockNextTurn'; now: number }
-  | { type: 'clockSetActive'; playerId: PlayerId; now: number };
+  | { type: 'clockSetActive'; playerId: PlayerId; now: number }
+  /** Random starting player: sets the active player, turn back to 1 and turn timer to 0. Clock action. */
+  | { type: 'pickFirstPlayer'; playerId: PlayerId; now: number };
 
 /** Undo-able history: core keeps past states, UI only calls undo(). */
 export interface History {
