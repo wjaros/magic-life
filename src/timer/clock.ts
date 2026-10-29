@@ -94,6 +94,7 @@ export function nextTurn(
 
 /** Switches the active player without advancing the turn counter; resets the turn timer. */
 export function setActive(clock: ClockState, playerId: PlayerId, now: number): ClockState {
+  if (playerId === clock.activePlayerId) return clock;
   const folded = fold(clock, now);
   return {
     ...folded,

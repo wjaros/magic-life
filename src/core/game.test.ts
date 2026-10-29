@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, reduce, rotationsFor } from './game';
 import { alivePlayers, lossReason } from './rules';
+import { snapshot } from '../timer/clock';
 import type { Action, GameSettings, GameState, PlayerSetup } from './types';
 
 const settings: GameSettings = { startingLife: 40, turnLimitMs: null };
@@ -250,7 +251,7 @@ describe('clock actions', () => {
     expect(s.clock.turn).toBe(1);
     const same = reduce(s, { type: 'clockSetActive', playerId: 'p3', now: 700 });
     expect(same.clock.activePlayerId).toBe('p3');
-    expect(same.clock.turnElapsedMs).toBe(300);
+    expect(snapshot(same.clock, 700, null).turnMs).toBe(300);
   });
 
   it('clamps negative time deltas to zero', () => {
