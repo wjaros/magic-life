@@ -17,12 +17,12 @@ test('21 commander damage from one opponent eliminates the player; undo restores
   // Commander damage also costs life (21 damage from 40 -> 19).
   await expect(lifeOf(page, 0)).toHaveText('19');
 
-  // One undo removes the last point of damage: 20 damage, life 20, no longer eliminated.
+  // Rapid clicks on the same stepper merge into one undo step: undo restores 0 damage, life 40.
   await page.getByRole('button', { name: 'Cofnij', exact: true }).click();
 
   await expect(panel(page, 0)).not.toHaveClass(/\bout\b/);
   await expect(panel(page, 0).locator('.reason')).toHaveCount(0);
-  await expect(lifeOf(page, 0)).toHaveText('20');
+  await expect(lifeOf(page, 0)).toHaveText('40');
 });
 
 test('10 poison eliminates the player', async ({ page }) => {
