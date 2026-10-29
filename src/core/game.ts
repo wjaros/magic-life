@@ -1,4 +1,4 @@
-import { createClock, nextTurn, pause, setActive, start } from './clockAdapter';
+import { createClock, nextTurn, pause, pickFirst, setActive, start } from './clockAdapter';
 import { alivePlayers, lossReason } from './rules';
 import { MAX_PINNED } from './types';
 import type {
@@ -322,5 +322,10 @@ function reduceInner(state: GameState, action: Action): GameState {
     case 'clockSetActive':
       if (!has(state, action.playerId)) return state;
       return { ...state, clock: setActive(state.clock, action.playerId, action.now) };
+    case 'pickFirstPlayer': {
+      const target = state.players.find((p) => p.id === action.playerId);
+      if (!target || lossReason(target) !== null) return state;
+      return { ...state, clock: pickFirst(state.clock, action.playerId, action.now) };
+    }
   }
 }

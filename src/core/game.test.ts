@@ -266,6 +266,33 @@ describe('clock actions', () => {
     expect(snapshot(same.clock, 700, null).turnMs).toBe(300);
   });
 
+  it('pickFirstPlayer sets active, resets turn to 1 and turn timer, keeps running', () => {
+    let s = reduce(mk(4), { type: 'clockStart', now: 0 });
+    s = reduce(s, { type: 'clockNextTurn', now: 500 });
+    expect(s.clock.turn).toBe(2);
+    s = reduce(s, { type: 'pickFirstPlayer', playerId: 'p3', now: 900 });
+    expect(s.clock.activePlayerId).toBe('p3');
+    expect(s.clock.turn).toBe(1);
+    expect(s.clock.turnElapsedMs).toBe(0);
+    expect(s.clock.running).toBe(true);
+    expect(s.clock.gameElapsedMs).toBe(900);
+    expect(snapshot(s.clock, 1000, null).turnMs).toBe(100);
+  });
+
+  it('pickFirstPlayer on a fresh paused game does not start the clock', () => {
+    const s = reduce(mk(4), { type: 'pickFirstPlayer', playerId: 'p2', now: 50 });
+    expect(s.clock.activePlayerId).toBe('p2');
+    expect(s.clock.running).toBe(false);
+    expect(s.clock.segmentStartedAt).toBeNull();
+    expect(s.clock.turn).toBe(1);
+  });
+
+  it('pickFirstPlayer ignores unknown and eliminated players', () => {
+    const s = reduce(mk(3), { type: 'setConceded', playerId: 'p2', conceded: true });
+    expect(reduce(s, { type: 'pickFirstPlayer', playerId: 'zz', now: 1 })).toBe(s);
+    expect(reduce(s, { type: 'pickFirstPlayer', playerId: 'p2', now: 1 })).toBe(s);
+  });
+
   it('clamps negative time deltas to zero', () => {
     let s = reduce(mk(2), { type: 'clockStart', now: 1000 });
     s = reduce(s, { type: 'clockPause', now: 500 });
