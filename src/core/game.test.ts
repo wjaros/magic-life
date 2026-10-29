@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, reduce, rotationsFor } from './game';
 import { alivePlayers, lossReason } from './rules';
+import { dispatch, initHistory, undo } from './history';
 import { snapshot } from '../timer/clock';
 import type { Action, GameSettings, GameState, PlayerSetup } from './types';
 
@@ -42,6 +43,17 @@ describe('createGame', () => {
     expect(rotationsFor(1)).toEqual([0]);
     expect(rotationsFor(8)).toHaveLength(8);
     expect(mk(2).players.map((p) => p.rotation)).toEqual([180, 0]);
+  });
+
+  it('seating "ends" tables', () => {
+    expect(rotationsFor(2, 'ends')).toEqual([180, 0]);
+    expect(rotationsFor(3, 'ends')).toEqual([180, 0, 0]);
+    expect(rotationsFor(4, 'ends')).toEqual([180, 180, 0, 0]);
+    expect(rotationsFor(5, 'ends')).toEqual([180, 180, 90, 270, 0]);
+    expect(rotationsFor(6, 'ends')).toEqual([180, 180, 90, 270, 0, 0]);
+    expect(rotationsFor(4, 'sides')).toEqual(rotationsFor(4));
+    const s = createGame(setups(4), { ...settings, seating: 'ends' }, 0);
+    expect(s.players.map((p) => p.rotation)).toEqual([180, 180, 0, 0]);
   });
 
   it('handles empty player list', () => {
@@ -383,5 +395,32 @@ describe('eliminated holders lose monarch/initiative', () => {
     s = reduce(s, { type: 'setMonarch', playerId: 'p4' });
     s = reduce(s, { type: 'adjustCommanderDamage', targetId: 'p4', sourceId: 'p1', slot: 0, delta: 21 });
     expect(s.monarch).toBeNull();
+  });
+});
+
+describe('seating actions', () => {
+  it('setSeating recomputes rotations and is undo-able', () => {
+    const h0 = initHistory(mk(4));
+    const h1 = dispatch(h0, { type: 'setSeating', seating: 'ends' });
+    expect(h1.present.settings.seating).toBe('ends');
+    expect(h1.present.players.map((p) => p.rotation)).toEqual([180, 180, 0, 0]);
+    expect(undo(h1).present.players.map((p) => p.rotation)).toEqual([90, 270, 90, 270]);
+  });
+  it('setSeating overrides manual rotations; same seating with matching rotations is a no-op', () => {
+    const s = mk(4);
+    expect(reduce(s, { type: 'setSeating', seating: 'sides' })).toBe(s);
+    const rotated = reduce(s, { type: 'rotatePlayer', playerId: 'p1' });
+    const back = reduce(rotated, { type: 'setSeating', seating: 'sides' });
+    expect(back.players.map((p) => p.rotation)).toEqual([90, 270, 90, 270]);
+  });
+  it('rotatePlayer adds 90 modulo 360; unknown id is a no-op', () => {
+    let s = mk(2); // [180, 0]
+    s = reduce(s, { type: 'rotatePlayer', playerId: 'p1' });
+    expect(get(s, 'p1').rotation).toBe(270);
+    s = reduce(s, { type: 'rotatePlayer', playerId: 'p1' });
+    expect(get(s, 'p1').rotation).toBe(0);
+    s = reduce(s, { type: 'rotatePlayer', playerId: 'p2' });
+    expect(get(s, 'p2').rotation).toBe(90);
+    expect(reduce(s, { type: 'rotatePlayer', playerId: 'zz' })).toBe(s);
   });
 });

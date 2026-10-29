@@ -59,7 +59,13 @@ function normalizePlayer(v: unknown): unknown {
 
 function normalizeGame(v: unknown): unknown {
   if (!isRecord(v) || !Array.isArray(v.players)) return v;
-  return { ...v, players: v.players.map(normalizePlayer) };
+  // seating is optional: keep 'sides' | 'ends', drop anything else.
+  let settings = v.settings;
+  if (isRecord(settings) && settings.seating !== undefined && settings.seating !== 'sides' && settings.seating !== 'ends') {
+    const { seating: _drop, ...rest } = settings;
+    settings = rest;
+  }
+  return { ...v, settings, players: v.players.map(normalizePlayer) };
 }
 
 function isPlayer(v: unknown): boolean {

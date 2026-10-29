@@ -75,6 +75,23 @@ describe('storage.load', () => {
     expect(storage.load()).toEqual(history);
   });
 
+  it('keeps a valid seating and drops an invalid one; old saves without it load', () => {
+    const withSeating = (seating: unknown): History => {
+      const h = makeHistory(0);
+      return { ...h, present: { ...h.present, settings: { ...h.present.settings, seating } as GameState['settings'] } };
+    };
+    storage.save(withSeating('ends'));
+    expect(storage.load()?.present.settings.seating).toBe('ends');
+    storage.save(withSeating('sides'));
+    expect(storage.load()?.present.settings.seating).toBe('sides');
+    storage.save(withSeating('diagonal'));
+    const loaded = storage.load();
+    expect(loaded).not.toBeNull();
+    expect(loaded?.present.settings.seating).toBeUndefined();
+    storage.save(makeHistory(0));
+    expect(storage.load()?.present.settings).toEqual({ startingLife: 40, turnLimitMs: null });
+  });
+
   it('returns null for invalid JSON', () => {
     localStorage.setItem(KEY, '{not json');
     expect(storage.load()).toBeNull();

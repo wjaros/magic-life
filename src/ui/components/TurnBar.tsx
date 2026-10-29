@@ -19,6 +19,7 @@ export function TurnBar() {
   const next = () => { act({ type: 'clockNextTurn', now: Date.now() }); vibrate(20); };
   const closeMenu = () => { setMenu(false); setConfirm(null); };
   const limit = g.settings.turnLimitMs;
+  const seating = g.settings.seating ?? 'sides';
 
   return (
     <>
@@ -43,6 +44,14 @@ export function TurnBar() {
           <div class="menu" onClick={(e) => e.stopPropagation()}>
             <h2>Menu</h2>
             <button class="btn" onClick={() => { redoAct(); }} disabled={!canRedo.value}>↷ Ponów</button>
+            {g.players.length > 2 && (
+              <button
+                class="btn"
+                onClick={() => act({ type: 'setSeating', seating: seating === 'ends' ? 'sides' : 'ends' })}
+              >
+                Układ: {seating === 'ends' ? 'na końcach' : 'wzdłuż'} ⇄
+              </button>
+            )}
             <button
               class="btn danger"
               onClick={() => {

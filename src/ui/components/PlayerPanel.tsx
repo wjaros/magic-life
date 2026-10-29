@@ -94,6 +94,7 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
     <div
       class={`panel${reason ? ' out' : ''}${active ? ' active' : ''}${warnTurn ? ' over' : ''}`}
       style={{ '--pc': p.color }}
+      data-rotation={p.rotation}
     >
       <Rotated rotation={p.rotation}>
         <div class={`panel-inner${p.pinned.length > 0 ? ' has-pins' : ''}`}>

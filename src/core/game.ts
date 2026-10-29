@@ -3,7 +3,7 @@ import { alivePlayers, lossReason } from './rules';
 import { MAX_PINNED } from './types';
 import type {
   Action, BuiltinCounter, CustomCounter, GameSettings, GameState, PinKey, Player, PlayerId,
-  PlayerSetup, Rotation,
+  PlayerSetup, Rotation, Seating,
 } from './types';
 
 export const BUILTIN_COUNTERS: readonly BuiltinCounter[] = ['energy', 'experience', 'poison', 'tax'];
@@ -56,8 +56,28 @@ export const ROTATIONS: Record<number, Rotation[]> = {
   6: [90, 270, 90, 270, 90, 270],
 };
 
-export function rotationsFor(count: number): Rotation[] {
-  const table = ROTATIONS[Math.min(Math.max(count, 1), 6)] ?? [0];
+/**
+ * Seating 'ends': players at the two short edges (phone portrait, tiles stay tall and narrow).
+ * Top row faces the far short edge (180), bottom row the near one (0). In the 5/6-player grids
+ * the middle row keeps the side seats (left column reads from the left edge = 90, right = 270).
+ *   2: [180, 0]
+ *   3: [180, 0, 0]
+ *   4: [180, 180, 0, 0]
+ *   5: [180, 180, 90, 270, 0]
+ *   6: [180, 180, 90, 270, 0, 0]
+ */
+export const ROTATIONS_ENDS: Record<number, Rotation[]> = {
+  1: [0],
+  2: [180, 0],
+  3: [180, 0, 0],
+  4: [180, 180, 0, 0],
+  5: [180, 180, 90, 270, 0],
+  6: [180, 180, 90, 270, 0, 0],
+};
+
+export function rotationsFor(count: number, seating: Seating = 'sides'): Rotation[] {
+  const tables = seating === 'ends' ? ROTATIONS_ENDS : ROTATIONS;
+  const table = tables[Math.min(Math.max(count, 1), 6)] ?? [0];
   return Array.from({ length: count }, (_, i) => table[i % table.length] ?? 0);
 }
 
@@ -67,7 +87,7 @@ export function createGame(
   now: number,
 ): GameState {
   const ids = players.map((_, i) => `p${i + 1}`);
-  const rotations = rotationsFor(players.length);
+  const rotations = rotationsFor(players.length, settings.seating);
   const built: Player[] = players.map((setup, i) => {
     const commanderDamage: Record<PlayerId, [number, number]> = {};
     for (const other of ids) if (other !== ids[i]) commanderDamage[other] = [0, 0];
@@ -266,6 +286,24 @@ function reduceInner(state: GameState, action: Action): GameState {
           customCounters: p.customCounters.map((x) => (x === c ? { ...x, value: v } : x)),
         };
       });
+
+    case 'setSeating': {
+      const rots = rotationsFor(state.players.length, action.seating);
+      const same =
+        (state.settings.seating ?? 'sides') === action.seating &&
+        state.players.every((p, i) => p.rotation === rots[i]);
+      if (same) return state;
+      return {
+        ...state,
+        settings: { ...state.settings, seating: action.seating },
+        players: state.players.map((p, i) => ({ ...p, rotation: rots[i] ?? 0 })),
+      };
+    }
+    case 'rotatePlayer':
+      return mapPlayer(state, action.playerId, (p) => ({
+        ...p,
+        rotation: ((p.rotation + 90) % 360) as Rotation,
+      }));
 
     case 'clockStart':
       return { ...state, clock: start(state.clock, action.now) };

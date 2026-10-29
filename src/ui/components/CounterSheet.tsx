@@ -192,6 +192,9 @@ export function CounterSheet(props: { playerId: string; onClose: () => void }) {
               >
                 🏰 Inicjatywa
               </button>
+              <button class="btn" onClick={() => send({ type: 'rotatePlayer', playerId: p.id })}>
+                Obróć panel ⟳
+              </button>
               <button
                 class={`btn danger${p.conceded ? ' on' : ''}`}
                 onClick={() => { send({ type: 'setConceded', playerId: p.id, conceded: !p.conceded }); if (!p.conceded) props.onClose(); }}
