@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Action, PinKey, Player } from '../../core/types';
 import { formatMs, lossReason } from '../engine';
 import { act, game, snap, vibrate } from '../store';
+import { firstBadge, rollHighlight, rolling } from '../firstPlayer';
 import { Rotated } from './Rotated';
 import { useHold } from '../useHold';
 import { REASON_LABEL } from './layout';
@@ -89,10 +90,13 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
   const tax = p.commanderCasts[0] * 2;
   const tax2 = p.commanderCasts[1] * 2;
   const warnTurn = active && s.overTurnLimit;
+  const spinning = rolling.value && firstBadge.value === null;
+  const lit = rollHighlight.value === p.id;
+  const badge = firstBadge.value === p.id;
 
   return (
     <div
-      class={`panel${reason ? ' out' : ''}${active ? ' active' : ''}${warnTurn ? ' over' : ''}`}
+      class={`panel${reason ? ' out' : ''}${active && !spinning ? ' active' : ''}${warnTurn ? ' over' : ''}${lit ? ' roll-hit' : ''}${badge ? ' first' : ''}`}
       style={{ '--pc': p.color }}
       data-rotation={p.rotation}
     >
@@ -123,6 +127,7 @@ export function PlayerPanel(props: { player: Player; onOpenSheet: () => void }) 
               {p.pinned.map((k) => <PinnedCounter key={k} player={p} pinKey={k} />)}
             </div>
           )}
+          {badge && <div class="first-badge" role="status">Zaczynasz!</div>}
           {reason && <div class="reason">{REASON_LABEL[reason]}</div>}
           <button class="stats" onClick={props.onOpenSheet} aria-label={`Liczniki gracza ${p.name}: trucizna ${p.poison}, podatek dowódcy ${tax}${p.hasPartner ? `/${tax2}` : ''}, czas ${formatMs(s.playerMs[p.id] ?? 0)}`}
           >

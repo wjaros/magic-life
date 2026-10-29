@@ -116,7 +116,9 @@ export type Action =
   | { type: 'clockStart'; now: number }
   | { type: 'clockPause'; now: number }
   | { type: 'clockNextTurn'; now: number }
-  | { type: 'clockSetActive'; playerId: PlayerId; now: number };
+  | { type: 'clockSetActive'; playerId: PlayerId; now: number }
+  /** Random starting player: sets the active player, turn back to 1 and turn timer to 0. Clock action. */
+  | { type: 'pickFirstPlayer'; playerId: PlayerId; now: number };
 
 /** Undo-able history: core keeps past states, UI only calls undo(). */
 export interface History {

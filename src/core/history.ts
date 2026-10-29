@@ -14,7 +14,8 @@ const isClockAction = (a: Action) =>
   a.type === 'clockStart' ||
   a.type === 'clockPause' ||
   a.type === 'clockNextTurn' ||
-  a.type === 'clockSetActive';
+  a.type === 'clockSetActive' ||
+  a.type === 'pickFirstPlayer';
 
 export function initHistory(state: GameState): History {
   return { past: [], present: state, future: [] };

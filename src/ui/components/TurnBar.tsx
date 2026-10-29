@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { formatMs } from '../engine';
+import { pickedFor, rollFirstPlayer, rolling } from '../firstPlayer';
 import { act, canRedo, canUndo, game, redoAct, resetGame, screen, snap, undoAct, vibrate } from '../store';
 
 export function TurnBar() {
@@ -19,6 +20,8 @@ export function TurnBar() {
   const next = () => { act({ type: 'clockNextTurn', now: Date.now() }); vibrate(20); };
   const closeMenu = () => { setMenu(false); setConfirm(null); };
   const limit = g.settings.turnLimitMs;
+  const fresh = s.turn === 1 && !s.running && s.gameMs === 0 && pickedFor.value !== g.createdAt;
+  const roll = () => { closeMenu(); rollFirstPlayer(); };
   const seating = g.settings.seating ?? 'sides';
 
   return (
@@ -36,6 +39,9 @@ export function TurnBar() {
           <button class="tb-btn" onClick={undoAct} disabled={!canUndo.value} aria-label="Cofnij">↶</button>
           <button class="tb-btn" onClick={() => setMenu(true)} aria-label="Menu">☰</button>
         </div>
+        {fresh && (
+          <button class="tb-roll" onClick={roll} disabled={rolling.value}>🎲 Losuj pierwszego gracza</button>
+        )}
         <button class="tb-next" onClick={next}>Następna tura</button>
       </div>
 
@@ -43,6 +49,7 @@ export function TurnBar() {
         <div class="overlay center" onClick={closeMenu}>
           <div class="menu" onClick={(e) => e.stopPropagation()}>
             <h2>Menu</h2>
+            <button class="btn" onClick={roll} disabled={rolling.value}>🎲 Losuj pierwszego</button>
             <button class="btn" onClick={() => { redoAct(); }} disabled={!canRedo.value}>↷ Ponów</button>
             {g.players.length > 2 && (
               <button
