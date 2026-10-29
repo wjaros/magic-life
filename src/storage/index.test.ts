@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameState, History, Player } from '../core/types';
-import { flushSaves, saveSoon, storage } from './index';
+import { flushSaves, loadLastSeen, pauseIfStale, saveSoon, storage } from './index';
 
 const KEY = 'magic-life/v1';
 
@@ -197,5 +197,83 @@ describe('saveSoon', () => {
 
     flushSaves();
     expect(storage.load()).toEqual(history);
+  });
+});
+
+describe('deep validation', () => {
+  const store = (present: unknown, past: unknown[] = []) =>
+    localStorage.setItem(KEY, JSON.stringify({ version: 1, history: { past, present, future: [] } }));
+
+  it('rejects a present state without clock or with partial players', () => {
+    const { clock: _c, ...noClock } = makeState();
+    store(noClock);
+    expect(storage.load()).toBeNull();
+    store({ version: 1, players: [{ id: 'p1' }] });
+    expect(storage.load()).toBeNull();
+  });
+
+  it('rejects bad nested fields', () => {
+    const s = makeState();
+    store({ ...s, clock: { ...s.clock, playerElapsedMs: { p1: 'x' } } });
+    expect(storage.load()).toBeNull();
+    store({ ...s, settings: {} });
+    expect(storage.load()).toBeNull();
+    store({ ...s, players: [{ ...s.players[0], commanderCasts: [1] }] });
+    expect(storage.load()).toBeNull();
+    store({ ...s, players: [{ ...s.players[0], commanderDamage: { p2: 5 } }] });
+    expect(storage.load()).toBeNull();
+    store({ ...s, players: [{ ...s.players[0], rotation: 45 }] });
+    expect(storage.load()).toBeNull();
+  });
+
+  it('drops invalid past entries but keeps the game', () => {
+    store(makeState(7), [makeState(1), { version: 1, players: [] }, makeState(2)]);
+    const h = storage.load();
+    expect(h?.past).toHaveLength(2);
+    expect(h?.present.players[0]?.life).toBe(7);
+  });
+});
+
+describe('lastSeen / pauseIfStale', () => {
+  const running = (): History => {
+    const h = makeHistory(0);
+    h.present = {
+      ...h.present,
+      clock: { ...h.present.clock, running: true, segmentStartedAt: 1000 },
+    };
+    return h;
+  };
+
+  it('pauses at lastSeen when the gap exceeds 10 minutes', () => {
+    const h = pauseIfStale(running(), 61_000, 61_000 + 11 * 60_000);
+    expect(h.present.clock.running).toBe(false);
+    expect(h.present.clock.gameElapsedMs).toBe(60_000);
+  });
+
+  it('leaves a recent or paused game alone', () => {
+    const r = running();
+    expect(pauseIfStale(r, 1000, 1000 + 5 * 60_000)).toBe(r);
+    expect(pauseIfStale(r, null, 10 ** 12)).toBe(r);
+    const p = makeHistory(0);
+    expect(pauseIfStale(p, 0, 10 ** 12)).toBe(p);
+  });
+
+  it('save writes lastSeen; clear removes it', () => {
+    expect(loadLastSeen()).toBeNull();
+    storage.save(makeHistory(0));
+    expect(loadLastSeen()).toBeGreaterThan(0);
+    storage.clear();
+    expect(loadLastSeen()).toBeNull();
+  });
+});
+
+describe('saveSoon maxWait', () => {
+  it('writes within 2 s even if changes keep coming', () => {
+    vi.useFakeTimers();
+    for (let i = 0; i < 20; i++) {
+      saveSoon(makeHistory(0));
+      vi.advanceTimersByTime(150);
+    }
+    expect(localStorage.getItem(KEY)).not.toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import { createClock, nextTurn, pause, setActive, start } from './clockAdapter';
-import { alivePlayers } from './rules';
+import { alivePlayers, lossReason } from './rules';
 import type {
   Action, GameSettings, GameState, Player, PlayerId, PlayerSetup, Rotation,
 } from './types';
@@ -81,7 +81,25 @@ function mapPlayer(state: GameState, id: PlayerId, fn: (p: Player) => Player): G
   return changed ? { ...state, players } : state;
 }
 
+/** A player who has lost the game can no longer hold the monarch or initiative. */
+function clearLostHolders(state: GameState): GameState {
+  const lost = (id: PlayerId | null) => {
+    if (id === null) return false;
+    const p = state.players.find((x) => x.id === id);
+    return p !== undefined && lossReason(p) !== null;
+  };
+  const m = lost(state.monarch);
+  const i = lost(state.initiative);
+  if (!m && !i) return state;
+  return { ...state, monarch: m ? null : state.monarch, initiative: i ? null : state.initiative };
+}
+
 export function reduce(state: GameState, action: Action): GameState {
+  const next = reduceInner(state, action);
+  return next === state ? state : clearLostHolders(next);
+}
+
+function reduceInner(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'newGame':
       return createGame(action.players, action.settings, action.now);

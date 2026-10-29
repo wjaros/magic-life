@@ -50,11 +50,16 @@ export function onHistoryChange(fn: (h: History | null) => void): () => void {
   return effect(() => fn(history.value));
 }
 
-// 250ms tick only while the clock is running.
+// 250ms tick only while the clock runs. Keyed on the boolean so taps (new history objects)
+// don't recreate the interval; `now` only changes when the displayed second changes.
+const clockRunning = computed(() => !!game.value?.clock.running);
 effect(() => {
-  if (!game.value?.clock.running) return;
+  if (!clockRunning.value) return;
   now.value = Date.now();
-  const id = setInterval(() => { now.value = Date.now(); }, 250);
+  const id = setInterval(() => {
+    const t = Date.now();
+    if (Math.floor(t / 1000) !== Math.floor(now.peek() / 1000)) now.value = t;
+  }, 250);
   return () => clearInterval(id);
 });
 

@@ -362,3 +362,26 @@ describe('purity', () => {
     expect(n.players[1]).toBe(s.players[1]);
   });
 });
+
+describe('eliminated holders lose monarch/initiative', () => {
+  it('clears monarch when the holder drops to 0 life, keeps others', () => {
+    let s = mk();
+    s = reduce(s, { type: 'setMonarch', playerId: 'p1' });
+    s = reduce(s, { type: 'setInitiative', playerId: 'p2' });
+    s = reduce(s, { type: 'adjustLife', playerId: 'p1', delta: -40 });
+    expect(s.monarch).toBeNull();
+    expect(s.initiative).toBe('p2');
+  });
+
+  it('clears on poison, concede and commander damage', () => {
+    let s = reduce(mk(), { type: 'setInitiative', playerId: 'p2' });
+    s = reduce(s, { type: 'adjustPoison', playerId: 'p2', delta: 10 });
+    expect(s.initiative).toBeNull();
+    s = reduce(s, { type: 'setMonarch', playerId: 'p3' });
+    s = reduce(s, { type: 'setConceded', playerId: 'p3', conceded: true });
+    expect(s.monarch).toBeNull();
+    s = reduce(s, { type: 'setMonarch', playerId: 'p4' });
+    s = reduce(s, { type: 'adjustCommanderDamage', targetId: 'p4', sourceId: 'p1', slot: 0, delta: 21 });
+    expect(s.monarch).toBeNull();
+  });
+});
