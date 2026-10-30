@@ -20,3 +20,10 @@ Właściciel hostuje na własnej infrastrukturze: serwer z Dockerem plus Nginx P
   Jeśli trzeba filtrować, użyj łańcucha `DOCKER-USER` albo `HOST_BIND`.
 - Dodaj endpoint `/healthz` i `HEALTHCHECK` w Dockerfile oraz podaj komendę `curl`
   do sprawdzenia połączenia z hosta NPM.
+
+## Język
+
+- Kod, komentarze, commity, tytuły i opisy PR oraz komentarze na GitHubie: **po angielsku**.
+- Rozmowa z właścicielem: po polsku.
+- Teksty w interfejsie aplikacji i dokumenty w repo (README, PLAN, DEPLOY): do ustalenia z właścicielem,
+  nie zakładaj polskiego tylko dlatego, że rozmowa jest po polsku.

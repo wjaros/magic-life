@@ -5,7 +5,7 @@ import { formatMs, lossReason, snapshot } from '../engine';
 import { isBuiltinKey, resolvePinned } from '../components/counters';
 import { REASON_LABEL } from '../components/layout';
 import { useHold } from '../useHold';
-import { setSoundEnabled, soundEnabled } from '../sound';
+import { setSoundEnabled, soundEnabled, testSound } from '../sound';
 import { RemoteSheet } from './RemoteSheet';
 import { exitRoom, vibrate } from './parts';
 
@@ -210,6 +210,7 @@ function Menu(props: { onClose: () => void }) {
         <button class="btn" role="switch" aria-checked={soundEnabled.value} onClick={() => setSoundEnabled(!soundEnabled.value)}>
           🔔 Dźwięk: {soundEnabled.value ? 'wł.' : 'wył.'}
         </button>
+        <button class="btn" onClick={testSound}>🔊 Testuj dźwięk</button>
         <button class="btn" onClick={() => { props.onClose(); remote.release(); }}>Zmień gracza</button>
         <button class="btn danger" onClick={() => { props.onClose(); exitRoom(); }}>Wyjdź</button>
         <button class="btn" onClick={props.onClose}>Zamknij</button>
