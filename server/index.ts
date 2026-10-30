@@ -52,6 +52,8 @@ const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp4': 'video/mp4',
+  '.wav': 'audio/wav',
   '.txt': 'text/plain; charset=utf-8',
 };
 

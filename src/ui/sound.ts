@@ -47,6 +47,7 @@ export function unlockAudio(): void {
     // iOS 17+: use the playback session so the hardware silent switch does not mute cues.
     const nav = navigator as Navigator & { audioSession?: { type: string } };
     if (nav.audioSession && nav.audioSession.type !== 'playback') nav.audioSession.type = 'playback';
+    else if (!nav.audioSession) unmuteViaMediaElement();
     const c = getCtx();
     if (!c) return;
     if (c.state !== 'running') void c.resume()?.catch?.(() => {});
@@ -57,6 +58,21 @@ export function unlockAudio(): void {
     src.connect(c.destination);
     src.start(0);
   } catch { /* ignore */ }
+}
+
+let mediaEl: HTMLAudioElement | null = null;
+/**
+ * iOS before 17 (no audioSession): playing an HTML media element inside a gesture switches the
+ * page to the playback audio category, so the hardware silent switch no longer mutes Web Audio.
+ */
+function unmuteViaMediaElement(): void {
+  if (mediaEl || typeof document === 'undefined') return;
+  mediaEl = document.createElement('audio');
+  mediaEl.src = `${import.meta.env.BASE_URL}silence.wav`;
+  mediaEl.setAttribute('playsinline', '');
+  mediaEl.setAttribute('x-webkit-airplay', 'deny');
+  mediaEl.preload = 'auto';
+  void mediaEl.play().catch(() => { mediaEl = null; });
 }
 
 const UNLOCK_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'] as const;
